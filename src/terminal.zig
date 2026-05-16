@@ -13,7 +13,9 @@ pub const GameInput = enum(i16) {
     noop = -1,
     j = 'j',
     k = 'k',
+    f = 'f',
     esc = 27,
+    space = 32,
     _,
 };
 
