@@ -62,9 +62,6 @@ pub fn main(init: std.process.Init) !void {
         const input = terminal.pollInput() catch break :game_loop;
 
         switch (input) {
-            .j => {},
-            .k => {},
-            .f => {},
             .space => {
                 switch (game_state.mode) {
                     .start_screen => {
@@ -77,6 +74,8 @@ pub fn main(init: std.process.Init) !void {
             .esc => break :game_loop,
             else => {},
         }
+
+        game_state.tick(&curr_buff, input);
 
         try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
 

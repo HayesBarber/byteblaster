@@ -107,6 +107,8 @@ pub const TerminalError = error{
     FailedToGetSize,
 };
 
+const required_rows = 24;
+
 pub fn getSize() TerminalError!WinSize {
     const fd = Io.File.stdout().handle;
     var winsize = posix.winsize{
@@ -124,12 +126,12 @@ pub fn getSize() TerminalError!WinSize {
 
     const size = WinSize{
         .cols = winsize.col,
-        .rows = winsize.row,
+        .rows = @min(winsize.row, required_rows),
     };
 
     if (size.cols < 128) {
         return TerminalError.TooFewColumns;
-    } else if (size.rows < 32) {
+    } else if (size.rows < required_rows) {
         return TerminalError.TooFewRows;
     }
 
