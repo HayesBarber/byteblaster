@@ -3,6 +3,8 @@ const Io = std.Io;
 
 const terminal = @import("terminal.zig");
 
+const dt_ns = 16_666_667;
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
@@ -17,9 +19,7 @@ pub fn main(init: std.process.Init) !void {
     defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
     game_loop: while (true) {
-        const input = terminal.pollInput() catch {
-            break :game_loop;
-        };
+        const input = terminal.pollInput() catch break :game_loop;
 
         switch (input) {
             .j => {
@@ -33,5 +33,10 @@ pub fn main(init: std.process.Init) !void {
             .esc => break :game_loop,
             else => {},
         }
+
+        // update();
+        // render();
+
+        io.sleep(std.Io.Duration.fromNanoseconds(dt_ns), .awake) catch {};
     }
 }
