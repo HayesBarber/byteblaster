@@ -45,23 +45,39 @@ pub const ScreenBuff = struct {
 
     pub fn loadString(self: *ScreenBuff, text: []const u8) !void {
         var row: usize = 0;
-        var col: usize = 0;
 
-        var iter = std.unicode.Utf8View.initUnchecked(text).iterator();
+        var lines = std.mem.splitScalar(u8, text, '\n');
+        while (lines.next()) |line| {
+            if (row >= self.rows) break;
 
-        while (iter.nextCodepointSlice()) |glyph| {
-            if (std.mem.eql(u8, glyph, "\n")) {
-                row += 1;
-                col = 0;
-                continue;
+            // count UTF-8 glyphs in this line
+            var view = std.unicode.Utf8View.initUnchecked(line);
+            var it = view.iterator();
+
+            var glyph_count: usize = 0;
+            while (it.nextCodepointSlice()) |_| {
+                glyph_count += 1;
             }
 
-            if (row >= self.rows) break;
-            if (col >= self.cols) continue;
+            const pad = if (glyph_count < self.cols)
+                (self.cols - glyph_count) / 2
+            else
+                0;
 
-            self.set(row, col, glyph);
+            var col: usize = pad;
 
-            col += 1;
+            // reset iterator for actual write
+            view = std.unicode.Utf8View.initUnchecked(line);
+            it = view.iterator();
+
+            while (it.nextCodepointSlice()) |glyph| {
+                if (col >= self.cols) break;
+
+                self.set(row, col, glyph);
+                col += 1;
+            }
+
+            row += 1;
         }
     }
 
