@@ -16,5 +16,11 @@ pub fn main(init: std.process.Init) !void {
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
     defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
-    try terminal.handleInput(stdout_writer);
+    while (true) {
+        const exit = terminal.pollInput(stdout_writer) catch {
+            break;
+        };
+
+        if (exit) break;
+    }
 }

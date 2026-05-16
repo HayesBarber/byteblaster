@@ -60,22 +60,39 @@ pub fn disableRawMode(original: posix.termios) !void {
     );
 }
 
-pub fn handleInput(writer: *Io.Writer) !void {
-    var buf: [1]u8 = undefined;
+pub fn pollInput(writer: *Io.Writer) !bool {
+    var fds = [_]posix.pollfd{
+        .{
+            .fd = posix.STDIN_FILENO,
+            .events = posix.POLL.IN,
+            .revents = 0,
+        },
+    };
 
-    while (true) {
-        _ = try posix.read(posix.STDIN_FILENO, &buf);
-        switch (parseInput(buf[0])) {
-            .j => {
-                try writer.print("j", .{});
-                try writer.flush();
-            },
-            .k => {
-                try writer.print("k", .{});
-                try writer.flush();
-            },
-            .esc => return,
-            else => {},
-        }
+    // 0 timeout = non-blocking poll
+    const n = try posix.poll(&fds, 0);
+
+    // no input this frame
+    if (n == 0) return false;
+
+    // stdin not readable
+    if ((fds[0].revents & posix.POLL.IN) == 0) return false;
+
+    var buf: [1]u8 = undefined;
+    _ = try posix.read(posix.STDIN_FILENO, &buf);
+
+    switch (parseInput(buf[0])) {
+        .j => {
+            try writer.print("j", .{});
+            try writer.flush();
+        },
+        .k => {
+            try writer.print("k", .{});
+            try writer.flush();
+        },
+        .esc => return true, // signal exit
+        else => {},
     }
+
+    return false;
 }
