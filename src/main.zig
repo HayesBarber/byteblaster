@@ -13,8 +13,8 @@ pub fn main(init: std.process.Init) !void {
     const original = try terminal.enableRawMode();
     defer terminal.disableRawMode(original) catch {};
 
-    try terminal.printANSICode(stdout_writer, terminal.ANSI_Code.enter_alternate_buffer);
-    defer terminal.printANSICode(stdout_writer, terminal.ANSI_Code.exit_alternate_buffer) catch {};
+    try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
+    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
     try terminal.handleInput(stdout_writer);
 }
