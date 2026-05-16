@@ -59,6 +59,8 @@ pub fn main(init: std.process.Init) !void {
     var game_state = game.GameState.init(size.rows, size.cols);
 
     while (true) {
+        const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
+
         const input = terminal.pollInput() catch break;
         if (input == .esc) break;
 
@@ -68,6 +70,10 @@ pub fn main(init: std.process.Init) !void {
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
-        io.sleep(std.Io.Duration.fromNanoseconds(dt_ns), .awake) catch {};
+        const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
+        if (elapsed < dt_ns) {
+            const remaining = dt_ns - elapsed;
+            io.sleep(std.Io.Duration.fromNanoseconds(remaining), .awake) catch {};
+        }
     }
 }
