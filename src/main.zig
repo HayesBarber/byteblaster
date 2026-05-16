@@ -14,8 +14,8 @@ pub fn main(init: std.process.Init) !void {
     _ = terminal.getSize() catch |e| {
         switch (e) {
             error.FailedToGetSize => try stdout_writer.print("Failed to get terminal window size\n", .{}),
-            error.TooFewColumns => try stdout_writer.print("Terminal columns needs to be at least 128\n", .{}),
-            error.TooFewRows => try stdout_writer.print("Terminal rows needs to be at least 32\n", .{}),
+            error.TooFewColumns => try stdout_writer.print("Too few terminal columns\n", .{}),
+            error.TooFewRows => try stdout_writer.print("Too few terminal rows\n", .{}),
         }
         return;
     };
