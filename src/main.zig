@@ -5,6 +5,16 @@ const terminal = @import("terminal.zig");
 const render = @import("render.zig");
 
 const dt_ns = 16_666_667;
+const start_screen =
+    \\
+    \\ █▄▄ █▄█ ▀█▀ █▀▀ █▄▄ █   ▄▀█ █▀▀ ▀█▀ █▀▀ █▀█
+    \\ █▄█  █   █  ██▄ █▄█ █▄▄ █▀█ ▄▄█  █  ██▄ █▀▄
+    \\
+    \\          Press <Space> to start
+    \\     <j> and <k> to move left and right
+    \\               <f> to fire
+    \\              <esc> to exit
+;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -31,12 +41,13 @@ pub fn main(init: std.process.Init) !void {
 
     const allocator = init.gpa;
 
-    var prev_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols, false);
+    var prev_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
     defer prev_buff.deinit(allocator);
 
-    var curr_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols, true);
+    var curr_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
     defer curr_buff.deinit(allocator);
 
+    try curr_buff.loadString(start_screen);
     try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
 
     game_loop: while (true) {
