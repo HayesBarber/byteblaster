@@ -11,7 +11,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &.{});
     const stdout_writer = &stdout_file_writer.interface;
 
-    const size = terminal.getSize() catch |e| {
+    _ = terminal.getSize() catch |e| {
         switch (e) {
             error.FailedToGetSize => try stdout_writer.print("Failed to get terminal window size\n", .{}),
             error.TooFewColumns => try stdout_writer.print("Terminal columns needs to be at least 128\n", .{}),
@@ -20,13 +20,8 @@ pub fn main(init: std.process.Init) !void {
         return;
     };
 
-    try stdout_writer.print("Rows: {d}, Cols: {d}", .{ size.rows, size.cols });
-
     const original = try terminal.enableRawMode();
     defer terminal.disableRawMode(original) catch {};
-
-    try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
-    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
     game_loop: while (true) {
         const input = terminal.pollInput() catch break :game_loop;
