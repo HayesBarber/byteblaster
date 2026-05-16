@@ -86,3 +86,32 @@ pub fn pollInput() !GameInput {
 
     return parseInput(buf[0]);
 }
+
+pub const WinSize = struct {
+    cols: u16 = 0,
+    rows: u16 = 0,
+    failed: u1 = 0,
+};
+
+pub fn getSize() WinSize {
+    const fd = Io.File.stdout().handle;
+    var winsize = posix.winsize{
+        .row = 0,
+        .col = 0,
+        .xpixel = 0,
+        .ypixel = 0,
+    };
+
+    const err = posix.system.ioctl(fd, posix.T.IOCGWINSZ, @intFromPtr(&winsize));
+
+    if (posix.errno(err) == .SUCCESS) {
+        return WinSize{
+            .cols = winsize.col,
+            .rows = winsize.row,
+        };
+    }
+
+    return WinSize{
+        .failed = 1,
+    };
+}

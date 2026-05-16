@@ -18,6 +18,13 @@ pub fn main(init: std.process.Init) !void {
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
     defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
+    const size = terminal.getSize();
+
+    if (size.failed > 0) {
+        try stdout_writer.writeAll("Failed to get terminal window size\n");
+        std.process.exit(1);
+    }
+
     game_loop: while (true) {
         const input = terminal.pollInput() catch break :game_loop;
 
