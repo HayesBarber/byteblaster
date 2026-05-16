@@ -43,6 +43,12 @@ pub const ScreenBuff = struct {
         };
     }
 
+    pub fn clear(self: *ScreenBuff) void {
+        for (self.data) |*cell| {
+            cell.set(" ");
+        }
+    }
+
     pub fn loadString(self: *ScreenBuff, text: []const u8) !void {
         var row: usize = 0;
 

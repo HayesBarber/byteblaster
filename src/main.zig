@@ -3,6 +3,7 @@ const Io = std.Io;
 
 const terminal = @import("terminal.zig");
 const render = @import("render.zig");
+const game = @import("game.zig");
 
 const dt_ns = 16_666_667;
 const start_screen =
@@ -37,33 +38,35 @@ pub fn main(init: std.process.Init) !void {
     defer terminal.disableRawMode(original) catch {};
 
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.hide_cursor);
-    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
-    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
+    defer {
+        terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
+        terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
+    }
 
     const allocator = init.gpa;
-
     var prev_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    defer prev_buff.deinit(allocator);
-
     var curr_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    defer curr_buff.deinit(allocator);
+    defer {
+        prev_buff.deinit(allocator);
+        curr_buff.deinit(allocator);
+    }
 
     try curr_buff.loadString(start_screen);
     try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
+    @memcpy(prev_buff.data, curr_buff.data);
 
-    game_loop: while (true) {
-        const input = terminal.pollInput() catch break :game_loop;
+    var game_state = game.GameState.init(size.rows, size.cols);
 
-        switch (input) {
-            .j => {},
-            .k => {},
-            .esc => break :game_loop,
-            else => {},
-        }
+    while (true) {
+        const input = terminal.pollInput() catch break;
+        if (input == .esc) break;
 
-        // update();
-        // render();
+        game_state.tick(&curr_buff, input);
+
+        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
+
+        std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
         io.sleep(std.Io.Duration.fromNanoseconds(dt_ns), .awake) catch {};
     }
