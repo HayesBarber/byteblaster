@@ -7,13 +7,17 @@ pub const ANSICode = enum {
     exit_alternate_buffer,
     clear_screen,
     hide_cursor,
+    show_cursor,
+    move_cursor,
 };
 
 pub const GameInput = enum(i16) {
     noop = -1,
     j = 'j',
     k = 'k',
+    f = 'f',
     esc = 27,
+    space = 32,
     _,
 };
 
@@ -23,6 +27,8 @@ fn codeToRaw(code: ANSICode) []const u8 {
         .exit_alternate_buffer => "\x1b[?1049l",
         .clear_screen => "\x1b[2J",
         .hide_cursor => "\x1b[?25l",
+        .show_cursor => "\x1b[?25h",
+        .move_cursor => "\x1b[{d};{d}H",
     };
 }
 
@@ -31,7 +37,11 @@ fn parseInput(byte: u8) GameInput {
 }
 
 pub fn printANSICode(writer: *Io.Writer, comptime code: ANSICode) !void {
-    try writer.print(codeToRaw(code), .{});
+    try printANSI(writer, code, .{});
+}
+
+pub fn printANSI(writer: *Io.Writer, comptime code: ANSICode, args: anytype) !void {
+    try writer.print(codeToRaw(code), args);
     try writer.flush();
 }
 
@@ -83,4 +93,45 @@ pub fn pollInput() !GameInput {
     _ = try posix.read(posix.STDIN_FILENO, &buf);
 
     return parseInput(buf[0]);
+}
+
+pub const WinSize = struct {
+    cols: usize = 0,
+    rows: usize = 0,
+    failed: u1 = 0,
+};
+
+pub const TerminalError = error{
+    TooFewColumns,
+    TooFewRows,
+    FailedToGetSize,
+};
+
+pub fn getSize() TerminalError!WinSize {
+    const fd = Io.File.stdout().handle;
+    var winsize = posix.winsize{
+        .row = 0,
+        .col = 0,
+        .xpixel = 0,
+        .ypixel = 0,
+    };
+
+    const err = posix.system.ioctl(fd, posix.T.IOCGWINSZ, @intFromPtr(&winsize));
+
+    if (posix.errno(err) != .SUCCESS) {
+        return TerminalError.FailedToGetSize;
+    }
+
+    const size = WinSize{
+        .cols = winsize.col,
+        .rows = winsize.row,
+    };
+
+    if (size.cols < 128) {
+        return TerminalError.TooFewColumns;
+    } else if (size.rows < 32) {
+        return TerminalError.TooFewRows;
+    }
+
+    return size;
 }
