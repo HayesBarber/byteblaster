@@ -2,12 +2,13 @@ const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 
 const MAX_LAZERS = 64;
+const MAX_ALIENS = 512;
 
-pub const Lazer = struct {
+pub const Point = struct {
     row: usize,
     col: usize,
 
-    pub fn init(row: usize, col: usize) Lazer {
+    pub fn init(row: usize, col: usize) Point {
         return .{
             .row = row,
             .col = col,
@@ -20,8 +21,11 @@ pub const GameState = struct {
     cols: usize,
     rows: usize,
     mode: Mode,
-    lazers: [MAX_LAZERS]Lazer,
+    lazers: [MAX_LAZERS]Point,
     lazer_count: usize,
+    aliens: [MAX_LAZERS]Point,
+    alien_count: usize,
+    tick_counter: u64,
 
     pub fn init(rows: usize, cols: usize) GameState {
         return .{
@@ -31,6 +35,9 @@ pub const GameState = struct {
             .mode = .start_screen,
             .lazers = undefined,
             .lazer_count = 0,
+            .aliens = undefined,
+            .alien_count = 0,
+            .tick_counter = 0,
         };
     }
 
@@ -49,7 +56,7 @@ pub const GameState = struct {
     fn spawnLaser(self: *GameState) void {
         if (self.lazer_count >= MAX_LAZERS) return;
 
-        self.lazers[self.lazer_count] = Lazer.init(self.rows - 2, self.player_col);
+        self.lazers[self.lazer_count] = Point.init(self.rows - 2, self.player_col);
         self.lazer_count += 1;
     }
 
@@ -69,6 +76,7 @@ pub const GameState = struct {
     }
 
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
+        self.tick_counter += 1;
         if (self.mode != Mode.playing and input != .space) return;
 
         buff.clear();
