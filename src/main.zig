@@ -26,6 +26,8 @@ pub fn main(init: std.process.Init) !void {
 
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.hide_cursor);
     defer terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
+    try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
+    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
     const allocator = init.gpa;
 

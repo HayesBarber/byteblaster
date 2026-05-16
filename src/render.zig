@@ -20,10 +20,19 @@ pub const ScreenBuff = struct {
 
     pub fn init(allocator: std.mem.Allocator, rows: usize, cols: usize, is_start_screen: bool) !ScreenBuff {
         const data = try allocator.alloc(u8, rows * cols);
-        @memset(data, 0);
+        @memset(data, ' ');
         if (is_start_screen) {
-            const len = @min(start_screen.len, data.len);
-            @memcpy(data[0..len], start_screen[0..len]);
+            var row: usize = 0;
+
+            var lines = std.mem.splitScalar(u8, start_screen, '\n');
+            while (lines.next()) |line| {
+                const len = @min(line.len, cols);
+
+                const start = row * cols;
+                @memcpy(data[start .. start + len], line[0..len]);
+
+                row += 1;
+            }
         }
 
         return .{
@@ -53,7 +62,7 @@ pub fn renderBuff(prev: *ScreenBuff, curr: *ScreenBuff, writer: *Io.Writer) !voi
             const prev_byte = prev.get(r, c);
 
             if (curr_byte != prev_byte) {
-                try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r, c });
+                try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r + 1, c + 1 });
                 try writer.writeByte(curr_byte);
             }
         }
