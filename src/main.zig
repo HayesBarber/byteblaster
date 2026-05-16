@@ -58,22 +58,9 @@ pub fn main(init: std.process.Init) !void {
 
     var game_state = game.GameState.init(size.rows, size.cols);
 
-    game_loop: while (true) {
-        const input = terminal.pollInput() catch break :game_loop;
-
-        switch (input) {
-            .space => {
-                switch (game_state.mode) {
-                    .start_screen => {
-                        game_state.mode = .playing;
-                        curr_buff.clear();
-                    },
-                    else => {},
-                }
-            },
-            .esc => break :game_loop,
-            else => {},
-        }
+    while (true) {
+        const input = terminal.pollInput() catch break;
+        if (input == .esc) break;
 
         game_state.tick(&curr_buff, input);
 

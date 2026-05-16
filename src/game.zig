@@ -29,13 +29,14 @@ pub const GameState = struct {
     }
 
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
-        if (self.mode != Mode.playing) return;
+        if (self.mode != Mode.playing and input != .space) return;
 
         buff.clear();
 
         switch (input) {
             .j => self.moveLeft(),
             .k => self.moveRight(),
+            .space => self.mode = .playing,
             else => {},
         }
 
