@@ -23,6 +23,9 @@ pub fn main(init: std.process.Init) !void {
     const original = try terminal.enableRawMode();
     defer terminal.disableRawMode(original) catch {};
 
+    try terminal.printANSICode(stdout_writer, terminal.ANSICode.hide_cursor);
+    defer terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
+
     game_loop: while (true) {
         const input = terminal.pollInput() catch break :game_loop;
 

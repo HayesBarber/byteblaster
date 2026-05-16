@@ -7,6 +7,7 @@ pub const ANSICode = enum {
     exit_alternate_buffer,
     clear_screen,
     hide_cursor,
+    show_cursor,
 };
 
 pub const GameInput = enum(i16) {
@@ -25,6 +26,7 @@ fn codeToRaw(code: ANSICode) []const u8 {
         .exit_alternate_buffer => "\x1b[?1049l",
         .clear_screen => "\x1b[2J",
         .hide_cursor => "\x1b[?25l",
+        .show_cursor => "\x1b[?25h",
     };
 }
 
