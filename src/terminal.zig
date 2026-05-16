@@ -93,7 +93,13 @@ pub const WinSize = struct {
     failed: u1 = 0,
 };
 
-pub fn getSize() WinSize {
+pub const TerminalError = error{
+    TooFewColumns,
+    TooFewRows,
+    FailedToGetSize,
+};
+
+pub fn getSize() TerminalError!WinSize {
     const fd = Io.File.stdout().handle;
     var winsize = posix.winsize{
         .row = 0,
@@ -104,14 +110,20 @@ pub fn getSize() WinSize {
 
     const err = posix.system.ioctl(fd, posix.T.IOCGWINSZ, @intFromPtr(&winsize));
 
-    if (posix.errno(err) == .SUCCESS) {
-        return WinSize{
-            .cols = winsize.col,
-            .rows = winsize.row,
-        };
+    if (posix.errno(err) != .SUCCESS) {
+        return TerminalError.FailedToGetSize;
     }
 
-    return WinSize{
-        .failed = 1,
+    const size = WinSize{
+        .cols = winsize.col,
+        .rows = winsize.row,
     };
+
+    if (size.cols < 128) {
+        return TerminalError.TooFewColumns;
+    } else if (size.rows < 32) {
+        return TerminalError.TooFewRows;
+    }
+
+    return size;
 }
