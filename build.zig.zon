@@ -1,11 +1,14 @@
 .{
     .name = .byteblaster,
     .version = "0.0.0",
+    .fingerprint = 0x1799805d2878f50c,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{},
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
+        "LICENSE",
+        "README.md",
     },
 }
