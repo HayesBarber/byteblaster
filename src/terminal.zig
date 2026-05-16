@@ -8,6 +8,7 @@ pub const ANSICode = enum {
     clear_screen,
     hide_cursor,
     show_cursor,
+    move_cursor,
 };
 
 pub const GameInput = enum(i16) {
@@ -27,6 +28,7 @@ fn codeToRaw(code: ANSICode) []const u8 {
         .clear_screen => "\x1b[2J",
         .hide_cursor => "\x1b[?25l",
         .show_cursor => "\x1b[?25h",
+        .move_cursor => "\x1b[{d};{d}H",
     };
 }
 
@@ -35,7 +37,11 @@ fn parseInput(byte: u8) GameInput {
 }
 
 pub fn printANSICode(writer: *Io.Writer, comptime code: ANSICode) !void {
-    try writer.print(codeToRaw(code), .{});
+    try printANSI(writer, code, .{});
+}
+
+pub fn printANSI(writer: *Io.Writer, comptime code: ANSICode, args: anytype) !void {
+    try writer.print(codeToRaw(code), args);
     try writer.flush();
 }
 
@@ -90,8 +96,8 @@ pub fn pollInput() !GameInput {
 }
 
 pub const WinSize = struct {
-    cols: u16 = 0,
-    rows: u16 = 0,
+    cols: usize = 0,
+    rows: usize = 0,
     failed: u1 = 0,
 };
 
