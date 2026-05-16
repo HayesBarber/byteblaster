@@ -10,7 +10,11 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout_writer = &stdout_file_writer.interface;
 
+    const original = try terminal.enableRawMode();
+    defer terminal.disableRawMode(original) catch {};
+
     try terminal.printANSICode(stdout_writer, terminal.ANSI_Code.enter_alternate_buffer);
-    io.sleep(std.Io.Duration.fromSeconds(1), .awake) catch return;
-    try terminal.printANSICode(stdout_writer, terminal.ANSI_Code.exit_alternate_buffer);
+    defer terminal.printANSICode(stdout_writer, terminal.ANSI_Code.exit_alternate_buffer) catch {};
+
+    try terminal.handleInput(stdout_writer);
 }
