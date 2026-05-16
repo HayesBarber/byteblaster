@@ -16,11 +16,22 @@ pub fn main(init: std.process.Init) !void {
     try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
     defer terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
 
-    while (true) {
-        const exit = terminal.pollInput(stdout_writer) catch {
-            break;
+    game_loop: while (true) {
+        const input = terminal.pollInput() catch {
+            break :game_loop;
         };
 
-        if (exit) break;
+        switch (input) {
+            .j => {
+                try stdout_writer.print("j", .{});
+                try stdout_writer.flush();
+            },
+            .k => {
+                try stdout_writer.print("k", .{});
+                try stdout_writer.flush();
+            },
+            .esc => break :game_loop,
+            else => {},
+        }
     }
 }

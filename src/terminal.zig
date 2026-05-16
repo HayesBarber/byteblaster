@@ -9,7 +9,8 @@ pub const ANSICode = enum {
     hide_cursor,
 };
 
-pub const GameInput = enum(u8) {
+pub const GameInput = enum(i16) {
+    noop = -1,
     j = 'j',
     k = 'k',
     esc = 27,
@@ -60,7 +61,7 @@ pub fn disableRawMode(original: posix.termios) !void {
     );
 }
 
-pub fn pollInput(writer: *Io.Writer) !bool {
+pub fn pollInput() !GameInput {
     var fds = [_]posix.pollfd{
         .{
             .fd = posix.STDIN_FILENO,
@@ -73,26 +74,13 @@ pub fn pollInput(writer: *Io.Writer) !bool {
     const n = try posix.poll(&fds, 0);
 
     // no input this frame
-    if (n == 0) return false;
+    if (n == 0) return GameInput.noop;
 
     // stdin not readable
-    if ((fds[0].revents & posix.POLL.IN) == 0) return false;
+    if ((fds[0].revents & posix.POLL.IN) == 0) return GameInput.noop;
 
     var buf: [1]u8 = undefined;
     _ = try posix.read(posix.STDIN_FILENO, &buf);
 
-    switch (parseInput(buf[0])) {
-        .j => {
-            try writer.print("j", .{});
-            try writer.flush();
-        },
-        .k => {
-            try writer.print("k", .{});
-            try writer.flush();
-        },
-        .esc => return true, // signal exit
-        else => {},
-    }
-
-    return false;
+    return parseInput(buf[0]);
 }
