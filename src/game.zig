@@ -213,5 +213,4 @@ pub fn glyph(e: Entity) []const u8 {
 pub const Mode = enum {
     start_screen,
     playing,
-    game_over,
 };
