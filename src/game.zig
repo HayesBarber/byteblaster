@@ -187,13 +187,11 @@ pub const GameState = struct {
         if (self.mode != Mode.playing and input != .space) return false;
         self.tick_counter += 1;
 
-        if (self.tick_counter > 1) {
-            _ = self.lazers.checkCollisionsWith(&self.aliens);
-            // game over
-            if (self.aliens.collidingWithPoint(&self.player_pos)) {
-                self.mode = .start_screen;
-                return true;
-            }
+        _ = self.lazers.checkCollisionsWith(&self.aliens);
+        // game over
+        if (self.aliens.collidingWithPoint(&self.player_pos)) {
+            self.mode = .start_screen;
+            return true;
         }
 
         buff.clear();
@@ -213,17 +211,19 @@ pub const GameState = struct {
 
         buff.set(self.player_pos.row, self.player_pos.col, glyph(.player));
 
-        self.lazers.update();
-        self.lazers.draw(buff);
         if (self.tick_counter % constants.RELOAD_SPEED == 0) {
             self.ammo = @min(self.ammo + 1, constants.MAX_AMMO);
         }
 
+        // don't update in the same tick so that they don't swap places and appear to phase through
         if (self.tick_counter % constants.ALIEN_SPEED == 0) {
             self.aliens.update();
             self.aliens.spawnRandom(0, constants.COLS, 5, &self.rng);
+        } else {
+            self.lazers.update();
         }
         self.aliens.draw(buff);
+        self.lazers.draw(buff);
 
         return false;
     }
