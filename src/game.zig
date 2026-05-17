@@ -2,6 +2,8 @@ const std = @import("std");
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const FPS = @import("main.zig").FPS;
+const ROWS = terminal.MIN_ROWS;
+const COLS = terminal.MIN_COLS;
 
 const MAX_LAZERS = 64;
 const MAX_ALIENS = 512;
@@ -20,8 +22,6 @@ pub const Point = struct {
 
 pub const GameState = struct {
     player_col: usize,
-    cols: usize,
-    rows: usize,
     mode: Mode,
     lazers: [MAX_LAZERS]Point,
     lazer_count: usize,
@@ -30,11 +30,9 @@ pub const GameState = struct {
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
 
-    pub fn init(rows: usize, cols: usize, seed: u64) GameState {
+    pub fn init(seed: u64) GameState {
         return .{
-            .player_col = cols / 2,
-            .cols = cols,
-            .rows = rows,
+            .player_col = COLS / 2,
             .mode = .start_screen,
             .lazers = undefined,
             .lazer_count = 0,
@@ -52,13 +50,13 @@ pub const GameState = struct {
     }
 
     fn moveRight(self: *GameState) void {
-        if (self.player_col + 1 < self.cols) {
+        if (self.player_col + 1 < COLS) {
             self.player_col += 1;
         }
     }
 
     fn randomCol(self: *GameState) usize {
-        return self.rng.random().intRangeAtMost(usize, 0, self.cols - 1);
+        return self.rng.random().intRangeAtMost(usize, 0, COLS - 1);
     }
 
     fn spawnAliens(self: *GameState) void {
@@ -84,7 +82,7 @@ pub const GameState = struct {
         var i: usize = 0;
 
         while (i < self.alien_count) : (i += 1) {
-            if (self.aliens[i].row == self.rows - 1) {
+            if (self.aliens[i].row == ROWS - 1) {
                 // remove by swapping with last
                 self.aliens[i] = self.aliens[self.alien_count - 1];
                 self.alien_count -= 1;
@@ -98,7 +96,7 @@ pub const GameState = struct {
     fn spawnLaser(self: *GameState) void {
         if (self.lazer_count >= MAX_LAZERS) return;
 
-        self.lazers[self.lazer_count] = Point.init(self.rows - 2, self.player_col);
+        self.lazers[self.lazer_count] = Point.init(ROWS - 2, self.player_col);
         self.lazer_count += 1;
     }
 

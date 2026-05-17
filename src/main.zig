@@ -60,7 +60,7 @@ pub fn main(init: std.process.Init) !void {
     var seed_buffer: [8]u8 = undefined;
     io.random(&seed_buffer);
     const seed = std.mem.readInt(u64, &seed_buffer, .little);
-    var game_state = game.GameState.init(size.rows, size.cols, seed);
+    var game_state = game.GameState.init(seed);
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
