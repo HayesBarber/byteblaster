@@ -6,6 +6,7 @@ const render = @import("render.zig");
 const game = @import("game.zig");
 
 const dt_ns = 16_666_667;
+pub const FPS = 60;
 const start_screen =
     \\
     \\
@@ -56,7 +57,10 @@ pub fn main(init: std.process.Init) !void {
     try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
     @memcpy(prev_buff.data, curr_buff.data);
 
-    var game_state = game.GameState.init(size.rows, size.cols);
+    var seed_buffer: [8]u8 = undefined;
+    io.random(&seed_buffer);
+    const seed = std.mem.readInt(u64, &seed_buffer, .little);
+    var game_state = game.GameState.init(size.rows, size.cols, seed);
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();

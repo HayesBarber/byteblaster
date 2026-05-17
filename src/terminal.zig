@@ -2,6 +2,9 @@ const std = @import("std");
 const Io = std.Io;
 const posix = std.posix;
 
+pub const MIN_ROWS = 24;
+pub const MIN_COLS = 48;
+
 pub const ANSICode = enum {
     enter_alternate_buffer,
     exit_alternate_buffer,
@@ -107,8 +110,6 @@ pub const TerminalError = error{
     FailedToGetSize,
 };
 
-const required_rows = 24;
-
 pub fn getSize() TerminalError!WinSize {
     const fd = Io.File.stdout().handle;
     var winsize = posix.winsize{
@@ -125,13 +126,13 @@ pub fn getSize() TerminalError!WinSize {
     }
 
     const size = WinSize{
-        .cols = winsize.col,
-        .rows = @min(winsize.row, required_rows),
+        .cols = @min(winsize.col, MIN_COLS),
+        .rows = @min(winsize.row, MIN_ROWS),
     };
 
-    if (size.cols < 128) {
+    if (size.cols < MIN_COLS) {
         return TerminalError.TooFewColumns;
-    } else if (size.rows < required_rows) {
+    } else if (size.rows < MIN_ROWS) {
         return TerminalError.TooFewRows;
     }
 
