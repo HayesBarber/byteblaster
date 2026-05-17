@@ -1,6 +1,7 @@
 pub const DT_NS = 16_666_667;
 pub const FPS = 60;
 pub const ALIEN_SPEED = (FPS / 3);
+pub const RELOAD_SPEED = (FPS / 1);
 
 pub const ROWS = 24;
 pub const COLS = 48;
@@ -9,6 +10,7 @@ pub const MIN_COLS = COLS + 8;
 
 pub const MAX_LAZERS = 64;
 pub const MAX_ALIENS = 512;
+pub const MAX_AMMO = 5;
 
 // ~14 B per cell (ANSI escape + content) for a full playfield render
 pub const STDOUT_BUFFER_SIZE = ROWS * COLS * 16;
