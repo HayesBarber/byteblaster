@@ -56,7 +56,7 @@ pub const EntityPool = struct {
             .count = 0,
             .direction = direction,
             .occupancy_grid_status = status,
-            .occupancy_grid = undefined,
+            .occupancy_grid = if (status == OccupancyGridStatus.enabled) [_]u64{0} ** constants.ROWS else undefined,
         };
     }
 
