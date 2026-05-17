@@ -1,3 +1,4 @@
+const std = @import("std");
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 
@@ -23,11 +24,12 @@ pub const GameState = struct {
     mode: Mode,
     lazers: [MAX_LAZERS]Point,
     lazer_count: usize,
-    aliens: [MAX_LAZERS]Point,
+    aliens: [MAX_ALIENS]Point,
     alien_count: usize,
     tick_counter: u64,
+    rng: std.Random.DefaultPrng,
 
-    pub fn init(rows: usize, cols: usize) GameState {
+    pub fn init(rows: usize, cols: usize, seed: u64) GameState {
         return .{
             .player_col = cols / 2,
             .cols = cols,
@@ -38,6 +40,7 @@ pub const GameState = struct {
             .aliens = undefined,
             .alien_count = 0,
             .tick_counter = 0,
+            .rng = .init(seed),
         };
     }
 
@@ -51,6 +54,31 @@ pub const GameState = struct {
         if (self.player_col + 1 < self.cols) {
             self.player_col += 1;
         }
+    }
+
+    fn spawnAliens(self: *GameState) void {
+        var mask: u64 = 0;
+        var spawned: usize = 0;
+
+        while (spawned < 5 and self.alien_count < MAX_ALIENS) {
+            const col = self.rng.random().intRangeAtMost(usize, 0, self.cols - 1);
+
+            const bit: u64 = @as(u64, 1) << @intCast(col);
+            if ((mask & bit) != 0) continue;
+
+            mask |= bit;
+
+            self.aliens[self.alien_count] = Point.init(0, col);
+            self.alien_count += 1;
+
+            spawned += 1;
+        }
+    }
+
+    fn updateAliens(self: *GameState) void {
+        var i: usize = 0;
+
+        while (i < self.alien_count) : (i += 1) {}
     }
 
     fn spawnLaser(self: *GameState) void {
@@ -96,6 +124,14 @@ pub const GameState = struct {
         self.updateLazers();
         for (self.lazers[0..self.lazer_count]) |l| {
             buff.set(l.row, l.col, glyph(.laser));
+        }
+
+        //update aliens
+        if (self.tick_counter % 60 == 0) {
+            self.spawnAliens();
+        }
+        for (self.aliens[0..self.alien_count]) |alien| {
+            buff.set(alien.row, alien.col, glyph(.alien));
         }
     }
 };
