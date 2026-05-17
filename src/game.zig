@@ -104,6 +104,15 @@ pub const EntityPool = struct {
         }
     }
 
+    pub fn collidingWithPoint(self: *EntityPool, point: *Point) bool {
+        if (self.occupancy_grid_status != OccupancyGridStatus.enabled) {
+            return false;
+        }
+
+        const mask = (@as(u64, 1) << @intCast(point.col));
+        return (self.occupancy_grid[point.row] & mask) != 0;
+    }
+
     pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) OccupancyGridError!u16 {
         if (other.occupancy_grid_status != OccupancyGridStatus.enabled) {
             return error.Disabled;
@@ -135,7 +144,7 @@ pub const EntityPool = struct {
 };
 
 pub const GameState = struct {
-    player_col: usize,
+    player_pos: Point,
     mode: Mode,
     lazer_storage: [MAX_LAZERS]Point,
     alien_storage: [MAX_ALIENS]Point,
@@ -146,7 +155,7 @@ pub const GameState = struct {
 
     pub fn init(seed: u64) GameState {
         var state = GameState{
-            .player_col = COLS / 2,
+            .player_pos = Point.init(ROWS - 1, COLS / 2),
             .mode = .start_screen,
             .lazer_storage = undefined,
             .alien_storage = undefined,
@@ -161,14 +170,14 @@ pub const GameState = struct {
     }
 
     fn moveLeft(self: *GameState) void {
-        if (self.player_col > 0) {
-            self.player_col -= 1;
+        if (self.player_pos.col > 0) {
+            self.player_pos.col -= 1;
         }
     }
 
     fn moveRight(self: *GameState) void {
-        if (self.player_col + 1 < COLS) {
-            self.player_col += 1;
+        if (self.player_pos.col + 1 < COLS) {
+            self.player_pos.col += 1;
         }
     }
 
@@ -178,6 +187,9 @@ pub const GameState = struct {
 
         if (self.tick_counter > 1) {
             _ = self.lazers.checkCollisionsWith(&self.aliens) catch {};
+            if (self.aliens.collidingWithPoint(&self.player_pos)) {
+                //todo game over
+            }
         }
 
         buff.clear();
@@ -185,12 +197,12 @@ pub const GameState = struct {
         switch (input) {
             .j => self.moveLeft(),
             .k => self.moveRight(),
-            .f => _ = self.lazers.spawn(ROWS - 1, self.player_col),
+            .f => _ = self.lazers.spawn(ROWS - 1, self.player_pos.col),
             .space => self.mode = .playing,
             else => {},
         }
 
-        buff.set(buff.rows - 1, self.player_col, glyph(.player));
+        buff.set(self.player_pos.row, self.player_pos.col, glyph(.player));
 
         self.lazers.update();
         for (self.lazers.points[0..self.lazers.count]) |l| {
