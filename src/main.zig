@@ -10,7 +10,8 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const allocator = init.gpa;
 
-    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &.{});
+    var stdout_buf: [constants.STDOUT_BUFFER_SIZE]u8 = undefined;
+    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buf);
     const stdout_writer = &stdout_file_writer.interface;
 
     const size = terminal.getSize() catch |e| {
@@ -38,8 +39,10 @@ pub fn main(init: std.process.Init) !void {
     const offset_c = game_offset.col + 1;
 
     try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
+    try stdout_writer.flush();
 
     try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+    try stdout_writer.flush();
     var game_state = game.GameState.init(&io);
 
     while (true) {
@@ -50,10 +53,12 @@ pub fn main(init: std.process.Init) !void {
 
         if (game_state.tick(&curr_buff, input)) {
             try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+            try stdout_writer.flush();
             game_state = game.GameState.init(&io);
         }
 
         try render.renderBuffDiff(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+        try stdout_writer.flush();
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 

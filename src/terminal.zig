@@ -44,7 +44,6 @@ pub fn printANSICode(writer: *Io.Writer, comptime code: ANSICode) !void {
 
 pub fn printANSI(writer: *Io.Writer, comptime code: ANSICode, args: anytype) !void {
     try writer.print(codeToRaw(code), args);
-    try writer.flush();
 }
 
 pub fn enableRawMode() !posix.termios {
@@ -144,6 +143,7 @@ pub const TerminalGuard = struct {
         const original = try enableRawMode();
         try printANSICode(writer, ANSICode.hide_cursor);
         try printANSICode(writer, ANSICode.enter_alternate_buffer);
+        try writer.flush();
         return .{ .original = original, .writer = writer };
     }
 
@@ -151,5 +151,6 @@ pub const TerminalGuard = struct {
         disableRawMode(self.original) catch {};
         printANSICode(self.writer, ANSICode.exit_alternate_buffer) catch {};
         printANSICode(self.writer, ANSICode.show_cursor) catch {};
+        self.writer.flush() catch {};
     }
 };
