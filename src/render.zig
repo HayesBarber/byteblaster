@@ -1,6 +1,7 @@
 const std = @import("std");
 const Io = std.Io;
 const terminal = @import("terminal.zig");
+const game = @import("game.zig");
 
 pub const Cell = struct {
     bytes: [4]u8 = .{ 0, 0, 0, 0 },
@@ -49,10 +50,12 @@ pub const ScreenBuff = struct {
         }
     }
 
-    pub fn loadString(self: *ScreenBuff, text: []const u8) !void {
+    pub fn loadString(self: *ScreenBuff, text: []const u8) !game.Point {
         var row: usize = 0;
-
         var lines = std.mem.splitScalar(u8, text, '\n');
+        var first_non_empty = game.Point{ .row = 0, .col = 0 };
+        var found_first_non_empty = false;
+
         while (lines.next()) |line| {
             if (row >= self.rows) break;
 
@@ -80,11 +83,18 @@ pub const ScreenBuff = struct {
                 if (col >= self.cols) break;
 
                 self.set(row, col, glyph);
+                if (!found_first_non_empty and !std.mem.eql(u8, glyph, " ")) {
+                    found_first_non_empty = true;
+                    first_non_empty.col = col;
+                    first_non_empty.row = row;
+                }
                 col += 1;
             }
 
             row += 1;
         }
+
+        return first_non_empty;
     }
 
     pub fn deinit(self: *ScreenBuff, allocator: std.mem.Allocator) void {
