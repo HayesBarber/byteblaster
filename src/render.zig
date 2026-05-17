@@ -104,14 +104,14 @@ pub const ScreenBuff = struct {
     }
 };
 
-pub fn renderBuff(prev: *ScreenBuff, curr: *ScreenBuff, writer: *Io.Writer) !void {
+pub fn renderBuff(prev: *ScreenBuff, curr: *ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
     for (0..prev.rows) |r| {
         for (0..prev.cols) |c| {
             const curr_cell = curr.get(r, c);
             const prev_cell = prev.get(r, c);
 
             if (!curr_cell.equals(prev_cell)) {
-                try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r + 1, c + 1 });
+                try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r + r_offset + 1, c + c_offset + 1 });
                 try writer.writeAll(curr_cell.slice());
             }
         }

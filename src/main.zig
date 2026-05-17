@@ -67,7 +67,7 @@ pub fn main(init: std.process.Init) !void {
             game_state = createGameState(&io);
         }
 
-        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
+        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer, 20, 0);
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
@@ -82,7 +82,7 @@ pub fn main(init: std.process.Init) !void {
 fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer) !void {
     curr.clear();
     try curr.loadString(start_screen);
-    try render.renderBuff(prev, curr, writer);
+    try render.renderBuff(prev, curr, writer, 20, 0);
     @memcpy(prev.data, curr.data);
 }
 
