@@ -20,29 +20,96 @@ pub const Point = struct {
     }
 };
 
+pub const Direction = enum {
+    up,
+    down,
+};
+
+pub const EntityPool = struct {
+    points: []Point,
+    count: usize,
+    direction: Direction,
+
+    pub fn init(storage: []Point, direction: Direction) EntityPool {
+        return .{
+            .points = storage,
+            .count = 0,
+            .direction = direction,
+        };
+    }
+
+    pub fn update(self: *EntityPool) void {
+        var i: usize = 0;
+        while (i < self.count) {
+            const at_despawn = switch (self.direction) {
+                .up => self.points[i].row == 0,
+                .down => self.points[i].row == ROWS - 1,
+            };
+            if (at_despawn) {
+                self.remove(i);
+                continue;
+            }
+            switch (self.direction) {
+                .up => self.points[i].row -= 1,
+                .down => self.points[i].row += 1,
+            }
+            i += 1;
+        }
+    }
+
+    pub fn remove(self: *EntityPool, index: usize) void {
+        self.points[index] = self.points[self.count - 1];
+        self.count -= 1;
+    }
+
+    pub fn spawn(self: *EntityPool, row: usize, col: usize) bool {
+        if (self.count >= self.points.len) return false;
+        self.points[self.count] = Point.init(row, col);
+        self.count += 1;
+        return true;
+    }
+
+    pub fn spawnRandom(self: *EntityPool, row: usize, cols: usize, count: usize, rng: *std.Random.DefaultPrng) void {
+        var mask: u64 = 0;
+        var spawned: usize = 0;
+        while (spawned < count and self.count < self.points.len) {
+            const col = rng.random().intRangeAtMost(usize, 0, cols - 1);
+            const bit: u64 = @as(u64, 1) << @intCast(col);
+            if ((mask & bit) != 0) continue;
+            mask |= bit;
+            self.points[self.count] = Point.init(row, col);
+            self.count += 1;
+            spawned += 1;
+        }
+    }
+};
+
 pub const GameState = struct {
     player_col: usize,
     mode: Mode,
-    lazers: [MAX_LAZERS]Point,
-    lazer_count: usize,
-    aliens: [MAX_ALIENS]Point,
-    alien_count: usize,
+    lazer_storage: [MAX_LAZERS]Point,
+    alien_storage: [MAX_ALIENS]Point,
+    lazers: EntityPool,
+    aliens: EntityPool,
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
     alien_rows: [ROWS]u64,
 
     pub fn init(seed: u64) GameState {
-        return .{
+        var state = GameState{
             .player_col = COLS / 2,
             .mode = .start_screen,
+            .lazer_storage = undefined,
+            .alien_storage = undefined,
             .lazers = undefined,
-            .lazer_count = 0,
             .aliens = undefined,
-            .alien_count = 0,
             .tick_counter = 0,
             .rng = .init(seed),
             .alien_rows = undefined,
         };
+        state.lazers = EntityPool.init(&state.lazer_storage, .up);
+        state.aliens = EntityPool.init(&state.alien_storage, .down);
+        return state;
     }
 
     fn moveLeft(self: *GameState) void {
@@ -57,101 +124,30 @@ pub const GameState = struct {
         }
     }
 
-    fn randomCol(self: *GameState) usize {
-        return self.rng.random().intRangeAtMost(usize, 0, COLS - 1);
-    }
-
-    fn spawnAliens(self: *GameState) void {
-        var mask: u64 = 0;
-        var spawned: usize = 0;
-
-        while (spawned < 5 and self.alien_count < MAX_ALIENS) {
-            const col = self.randomCol();
-
-            const bit: u64 = @as(u64, 1) << @intCast(col);
-            if ((mask & bit) != 0) continue;
-
-            mask |= bit;
-
-            self.aliens[self.alien_count] = Point.init(0, col);
-            self.alien_count += 1;
-
-            spawned += 1;
-        }
-    }
-
     fn updateAliens(self: *GameState) void {
+        self.aliens.update();
         self.alien_rows = [_]u64{0} ** ROWS;
-        var i: usize = 0;
-
-        while (i < self.alien_count) : (i += 1) {
-            if (self.aliens[i].row == ROWS - 1) {
-                // remove by swapping with last
-                self.aliens[i] = self.aliens[self.alien_count - 1];
-                self.alien_count -= 1;
-                continue;
-            }
-
-            self.aliens[i].row += 1;
-            self.alien_rows[self.aliens[i].row] |= (@as(u64, 1) << @intCast(self.aliens[i].col));
-        }
-    }
-
-    fn spawnLaser(self: *GameState) void {
-        if (self.lazer_count >= MAX_LAZERS) return;
-
-        //spawn at ROWS - 1 since it will get updated this same tick and move to ROWS - 2
-        self.lazers[self.lazer_count] = Point.init(ROWS - 1, self.player_col);
-        self.lazer_count += 1;
-    }
-
-    fn updateLazers(self: *GameState) void {
-        var i: usize = 0;
-
-        while (i < self.lazer_count) : (i += 1) {
-            if (self.lazers[i].row == 0) {
-                // remove by swapping with last
-                self.lazers[i] = self.lazers[self.lazer_count - 1];
-                self.lazer_count -= 1;
-                continue;
-            }
-
-            self.lazers[i].row -= 1;
+        for (self.aliens.points[0..self.aliens.count]) |alien| {
+            self.alien_rows[alien.row] |= (@as(u64, 1) << @intCast(alien.col));
         }
     }
 
     fn checkLazerCollisions(self: *GameState) void {
         var lazer_i: usize = 0;
-
-        while (lazer_i < self.lazer_count) {
-            const lazer = self.lazers[lazer_i];
-
+        while (lazer_i < self.lazers.count) {
+            const lazer = self.lazers.points[lazer_i];
             const mask = (@as(u64, 1) << @intCast(lazer.col));
-
-            // collision check
             if ((self.alien_rows[lazer.row] & mask) != 0) {
-
-                // clear alien bit
                 self.alien_rows[lazer.row] &= ~mask;
-
-                // remove alien
-                var alien_i: usize = 0;
-                while (alien_i < self.alien_count) : (alien_i += 1) {
-                    const alien = self.aliens[alien_i];
-
+                for (self.aliens.points[0..self.aliens.count], 0..) |alien, i| {
                     if (alien.row == lazer.row and alien.col == lazer.col) {
-                        self.aliens[alien_i] = self.aliens[self.alien_count - 1];
-                        self.alien_count -= 1;
+                        self.aliens.remove(i);
                         break;
                     }
                 }
-
-                // remove lazer
-                self.lazers[lazer_i] = self.lazers[self.lazer_count - 1];
-                self.lazer_count -= 1;
+                self.lazers.remove(lazer_i);
                 continue;
             }
-
             lazer_i += 1;
         }
     }
@@ -169,26 +165,23 @@ pub const GameState = struct {
         switch (input) {
             .j => self.moveLeft(),
             .k => self.moveRight(),
-            .f => self.spawnLaser(),
+            .f => _ = self.lazers.spawn(ROWS - 1, self.player_col),
             .space => self.mode = .playing,
             else => {},
         }
 
-        // update player
         buff.set(buff.rows - 1, self.player_col, glyph(.player));
 
-        //update lazers
-        self.updateLazers();
-        for (self.lazers[0..self.lazer_count]) |l| {
+        self.lazers.update();
+        for (self.lazers.points[0..self.lazers.count]) |l| {
             buff.set(l.row, l.col, glyph(.laser));
         }
 
-        //update aliens
         if (self.tick_counter % FPS == 0) {
             self.updateAliens();
-            self.spawnAliens();
+            self.aliens.spawnRandom(0, COLS, 5, &self.rng);
         }
-        for (self.aliens[0..self.alien_count]) |alien| {
+        for (self.aliens.points[0..self.aliens.count]) |alien| {
             buff.set(alien.row, alien.col, glyph(.alien));
         }
     }
