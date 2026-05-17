@@ -18,6 +18,18 @@ pub const Point = struct {
             .col = col,
         };
     }
+
+    fn moveLeft(self: *Point) void {
+        if (self.col > 0) {
+            self.col -= 1;
+        }
+    }
+
+    fn moveRight(self: *Point) void {
+        if (self.col + 1 < COLS) {
+            self.col += 1;
+        }
+    }
 };
 
 const Direction = enum {
@@ -169,18 +181,6 @@ pub const GameState = struct {
         return state;
     }
 
-    fn moveLeft(self: *GameState) void {
-        if (self.player_pos.col > 0) {
-            self.player_pos.col -= 1;
-        }
-    }
-
-    fn moveRight(self: *GameState) void {
-        if (self.player_pos.col + 1 < COLS) {
-            self.player_pos.col += 1;
-        }
-    }
-
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
         if (self.mode != Mode.playing and input != .space) return;
         self.tick_counter += 1;
@@ -195,8 +195,8 @@ pub const GameState = struct {
         buff.clear();
 
         switch (input) {
-            .j => self.moveLeft(),
-            .k => self.moveRight(),
+            .j => self.player_pos.moveLeft(),
+            .k => self.player_pos.moveRight(),
             .f => _ = self.lazers.spawn(ROWS - 1, self.player_pos.col),
             .space => self.mode = .playing,
             else => {},
