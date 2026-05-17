@@ -125,18 +125,14 @@ pub const EntityPool = struct {
     }
 
     pub fn collidingWithPoint(self: *EntityPool, point: *Point) bool {
-        if (self.occupancy_grid_status != OccupancyGridStatus.enabled) {
-            return false;
-        }
+        std.debug.assert(self.occupancy_grid_status == OccupancyGridStatus.enabled);
 
         const mask = (@as(u64, 1) << @intCast(point.col));
         return (self.occupancy_grid[point.row] & mask) != 0;
     }
 
-    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) OccupancyGridError!u16 {
-        if (other.occupancy_grid_status != OccupancyGridStatus.enabled) {
-            return error.Disabled;
-        }
+    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) u16 {
+        std.debug.assert(other.occupancy_grid_status == OccupancyGridStatus.enabled);
 
         var i: usize = 0;
         var collisions: u16 = 0;
@@ -194,7 +190,7 @@ pub const GameState = struct {
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
-            _ = self.lazers.checkCollisionsWith(&self.aliens) catch {};
+            _ = self.lazers.checkCollisionsWith(&self.aliens);
             if (self.aliens.collidingWithPoint(&self.player_pos)) {
                 //todo game over
             }
