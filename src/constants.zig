@@ -23,9 +23,9 @@ pub const start_screen =
 ;
 
 pub const frame = blk: {
-    const top = "┌" ++ ("─" ** COLS) ++ "┐\n";
+    const top = "╭" ++ ("─" ** COLS) ++ "╮\n";
     const mid = "│" ++ (" " ** COLS) ++ "│\n";
-    const bot = "└" ++ ("─" ** COLS) ++ "┘";
+    const bot = "╰" ++ ("─" ** COLS) ++ "╯";
 
     break :blk top ++ (mid ** ROWS) ++ bot;
 };
