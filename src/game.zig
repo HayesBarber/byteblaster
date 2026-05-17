@@ -2,8 +2,8 @@ const std = @import("std");
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const FPS = @import("main.zig").FPS;
-const ROWS = terminal.MIN_ROWS;
-const COLS = terminal.MIN_COLS;
+pub const ROWS = 24;
+pub const COLS = 48;
 
 const MAX_LAZERS = 64;
 const MAX_ALIENS = 512;

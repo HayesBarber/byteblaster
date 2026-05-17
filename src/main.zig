@@ -26,7 +26,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &.{});
     const stdout_writer = &stdout_file_writer.interface;
 
-    const size = terminal.getSize() catch |e| {
+    _ = terminal.getSize() catch |e| {
         switch (e) {
             error.FailedToGetSize => try stdout_writer.print("Failed to get terminal window size\n", .{}),
             error.TooFewColumns => try stdout_writer.print("Too few terminal columns\n", .{}),
@@ -46,8 +46,8 @@ pub fn main(init: std.process.Init) !void {
     }
 
     const allocator = init.gpa;
-    var prev_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    var curr_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
+    var prev_buff: render.ScreenBuff = try .init(allocator, game.ROWS, game.COLS);
+    var curr_buff: render.ScreenBuff = try .init(allocator, game.ROWS, game.COLS);
     defer {
         prev_buff.deinit(allocator);
         curr_buff.deinit(allocator);
@@ -67,7 +67,7 @@ pub fn main(init: std.process.Init) !void {
             game_state = createGameState(&io);
         }
 
-        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer, 20, 0);
+        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer, 0, 0);
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
@@ -82,7 +82,7 @@ pub fn main(init: std.process.Init) !void {
 fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer) !void {
     curr.clear();
     try curr.loadString(start_screen);
-    try render.renderBuff(prev, curr, writer, 20, 0);
+    try render.renderBuff(prev, curr, writer, 0, 0);
     @memcpy(prev.data, curr.data);
 }
 
