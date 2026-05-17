@@ -187,13 +187,11 @@ pub const GameState = struct {
         if (self.mode != Mode.playing and input != .space) return false;
         self.tick_counter += 1;
 
-        if (self.tick_counter > 1) {
-            _ = self.lazers.checkCollisionsWith(&self.aliens);
-            // game over
-            if (self.aliens.collidingWithPoint(&self.player_pos)) {
-                self.mode = .start_screen;
-                return true;
-            }
+        _ = self.lazers.checkCollisionsWith(&self.aliens);
+        // game over
+        if (self.aliens.collidingWithPoint(&self.player_pos)) {
+            self.mode = .start_screen;
+            return true;
         }
 
         buff.clear();
