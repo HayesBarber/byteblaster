@@ -53,7 +53,7 @@ pub fn main(init: std.process.Init) !void {
         curr_buff.deinit(allocator);
     }
 
-    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, 0, 0);
     var game_state = createGameState(&io);
 
     while (true) {
@@ -63,7 +63,7 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&curr_buff, input)) {
-            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, 0, 0);
             game_state = createGameState(&io);
         }
 
@@ -79,10 +79,10 @@ pub fn main(init: std.process.Init) !void {
     }
 }
 
-fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer) !void {
+fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
     curr.clear();
     try curr.loadString(start_screen);
-    try render.renderBuff(prev, curr, writer, 0, 0);
+    try render.renderBuff(prev, curr, writer, r_offset, c_offset);
     @memcpy(prev.data, curr.data);
 }
 
