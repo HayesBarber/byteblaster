@@ -8,6 +8,8 @@ const COLS = terminal.MIN_COLS;
 const MAX_LAZERS = 64;
 const MAX_ALIENS = 512;
 
+const ALIEN_SPEED = (FPS / 3);
+
 pub const Point = struct {
     row: usize,
     col: usize,
@@ -185,14 +187,16 @@ pub const GameState = struct {
         return state;
     }
 
-    pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
-        if (self.mode != Mode.playing and input != .space) return;
+    pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) bool {
+        if (self.mode != Mode.playing and input != .space) return false;
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
             _ = self.lazers.checkCollisionsWith(&self.aliens);
+            // game over
             if (self.aliens.collidingWithPoint(&self.player_pos)) {
-                //todo game over
+                self.mode = .start_screen;
+                return true;
             }
         }
 
@@ -211,11 +215,13 @@ pub const GameState = struct {
         self.lazers.update();
         self.lazers.draw(buff);
 
-        if (self.tick_counter % FPS == 0) {
+        if (self.tick_counter % ALIEN_SPEED == 0) {
             self.aliens.update();
             self.aliens.spawnRandom(0, COLS, 5, &self.rng);
         }
         self.aliens.draw(buff);
+
+        return false;
     }
 };
 

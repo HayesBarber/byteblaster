@@ -53,14 +53,8 @@ pub fn main(init: std.process.Init) !void {
         curr_buff.deinit(allocator);
     }
 
-    try curr_buff.loadString(start_screen);
-    try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
-    @memcpy(prev_buff.data, curr_buff.data);
-
-    var seed_buffer: [8]u8 = undefined;
-    io.random(&seed_buffer);
-    const seed = std.mem.readInt(u64, &seed_buffer, .little);
-    var game_state = game.GameState.init(seed);
+    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+    var game_state = createGameState(&io);
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
@@ -68,7 +62,10 @@ pub fn main(init: std.process.Init) !void {
         const input = terminal.pollInput() catch break;
         if (input == .esc) break;
 
-        game_state.tick(&curr_buff, input);
+        if (game_state.tick(&curr_buff, input)) {
+            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+            game_state = createGameState(&io);
+        }
 
         try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
 
@@ -80,4 +77,19 @@ pub fn main(init: std.process.Init) !void {
             io.sleep(std.Io.Duration.fromNanoseconds(remaining), .awake) catch {};
         }
     }
+}
+
+fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer) !void {
+    curr.clear();
+    try curr.loadString(start_screen);
+    try render.renderBuff(prev, curr, writer);
+    @memcpy(prev.data, curr.data);
+}
+
+fn createGameState(io: *const std.Io) game.GameState {
+    var seed_buffer: [8]u8 = undefined;
+    io.random(&seed_buffer);
+    const seed = std.mem.readInt(u64, &seed_buffer, .little);
+    const game_state = game.GameState.init(seed);
+    return game_state;
 }
