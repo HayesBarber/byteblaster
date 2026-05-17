@@ -52,15 +52,23 @@ pub const EntityPool = struct {
     direction: Direction,
     occupancy_grid_status: OccupancyGridStatus,
     occupancy_grid: [ROWS]u64,
+    entity: Entity,
 
-    pub fn init(storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
+    pub fn init(entity: Entity, storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
         return .{
+            .entity = entity,
             .points = storage,
             .count = 0,
             .direction = direction,
             .occupancy_grid_status = status,
             .occupancy_grid = undefined,
         };
+    }
+
+    pub fn draw(self: *EntityPool, buff: *render.ScreenBuff) void {
+        for (self.points[0..self.count]) |point| {
+            buff.set(point.row, point.col, glyph(self.entity));
+        }
     }
 
     pub fn update(self: *EntityPool) void {
@@ -176,8 +184,8 @@ pub const GameState = struct {
             .tick_counter = 0,
             .rng = .init(seed),
         };
-        state.lazers = EntityPool.init(&state.lazer_storage, .up, .disabled);
-        state.aliens = EntityPool.init(&state.alien_storage, .down, .enabled);
+        state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
+        state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
         return state;
     }
 
@@ -205,24 +213,20 @@ pub const GameState = struct {
         buff.set(self.player_pos.row, self.player_pos.col, glyph(.player));
 
         self.lazers.update();
-        for (self.lazers.points[0..self.lazers.count]) |l| {
-            buff.set(l.row, l.col, glyph(.laser));
-        }
+        self.lazers.draw(buff);
 
         if (self.tick_counter % FPS == 0) {
             self.aliens.update();
             self.aliens.spawnRandom(0, COLS, 5, &self.rng);
         }
-        for (self.aliens.points[0..self.aliens.count]) |alien| {
-            buff.set(alien.row, alien.col, glyph(.alien));
-        }
+        self.aliens.draw(buff);
     }
 };
 
 pub const Entity = enum {
     player,
     alien,
-    laser,
+    lazer,
     empty,
 };
 
@@ -230,7 +234,7 @@ pub fn glyph(e: Entity) []const u8 {
     return switch (e) {
         .player => "▲",
         .alien => "■",
-        .laser => "│",
+        .lazer => "│",
         .empty => " ",
     };
 }
