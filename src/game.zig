@@ -56,12 +56,16 @@ pub const GameState = struct {
         }
     }
 
+    fn randomCol(self: *GameState) usize {
+        return self.rng.random().intRangeAtMost(usize, 0, self.cols - 1);
+    }
+
     fn spawnAliens(self: *GameState) void {
         var mask: u64 = 0;
         var spawned: usize = 0;
 
         while (spawned < 5 and self.alien_count < MAX_ALIENS) {
-            const col = self.rng.random().intRangeAtMost(usize, 0, self.cols - 1);
+            const col = self.randomCol();
 
             const bit: u64 = @as(u64, 1) << @intCast(col);
             if ((mask & bit) != 0) continue;
@@ -78,7 +82,16 @@ pub const GameState = struct {
     fn updateAliens(self: *GameState) void {
         var i: usize = 0;
 
-        while (i < self.alien_count) : (i += 1) {}
+        while (i < self.alien_count) : (i += 1) {
+            if (self.aliens[i].row == self.rows - 1) {
+                // remove by swapping with last
+                self.aliens[i] = self.aliens[self.alien_count - 1];
+                self.alien_count -= 1;
+                continue;
+            }
+
+            self.aliens[i].row += 1;
+        }
     }
 
     fn spawnLaser(self: *GameState) void {
@@ -128,6 +141,7 @@ pub const GameState = struct {
 
         //update aliens
         if (self.tick_counter % 60 == 0) {
+            self.updateAliens();
             self.spawnAliens();
         }
         for (self.aliens[0..self.alien_count]) |alien| {
