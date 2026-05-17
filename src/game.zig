@@ -120,7 +120,7 @@ pub const GameState = struct {
         }
     }
 
-    fn checkCollisions(self: *GameState) void {
+    fn checkLazerCollisions(self: *GameState) void {
         var lazer_i: usize = 0;
 
         while (lazer_i < self.lazer_count) {
@@ -161,7 +161,7 @@ pub const GameState = struct {
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
-            self.checkCollisions();
+            self.checkLazerCollisions();
         }
 
         buff.clear();
