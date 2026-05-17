@@ -28,6 +28,37 @@ pub const Point = struct {
     }
 };
 
+const PointVel = struct {
+    pos_f: f64,
+    vel_f: f64,
+
+    fn init(col: f64) PointVel {
+        return .{
+            .pos_f = col,
+            .vel_f = 0.0,
+        };
+    }
+
+    fn drawCol(self: *const PointVel) usize {
+        return @as(usize, @intFromFloat(@round(self.pos_f)));
+    }
+
+    fn tick(self: *PointVel, input: terminal.GameInput) void {
+        if (input == .j) self.vel_f -= constants.PLAYER_ACCEL;
+        if (input == .k) self.vel_f += constants.PLAYER_ACCEL;
+        self.vel_f *= constants.PLAYER_FRICTION;
+        self.pos_f += self.vel_f;
+        const max: f64 = @floatFromInt(constants.COLS - 1);
+        if (self.pos_f < 0) {
+            self.pos_f = 0;
+            self.vel_f = 0;
+        } else if (self.pos_f > max) {
+            self.pos_f = max;
+            self.vel_f = 0;
+        }
+    }
+};
+
 const Direction = enum {
     up,
     down,
@@ -152,7 +183,7 @@ pub const EntityPool = struct {
 };
 
 pub const GameState = struct {
-    player_pos: Point,
+    player: PointVel,
     mode: Mode,
     lazer_storage: [constants.MAX_LAZERS]Point,
     alien_storage: [constants.MAX_ALIENS]Point,
@@ -168,7 +199,7 @@ pub const GameState = struct {
         const seed = std.mem.readInt(u64, &seed_buffer, .little);
 
         var state = GameState{
-            .player_pos = Point.init(constants.ROWS - 1, constants.COLS / 2),
+            .player = PointVel.init(@floatFromInt(constants.COLS / 2)),
             .mode = .start_screen,
             .lazer_storage = undefined,
             .alien_storage = undefined,
@@ -187,23 +218,20 @@ pub const GameState = struct {
         if (self.mode != Mode.playing and input != .space) return false;
         self.tick_counter += 1;
 
-        if (self.tick_counter > 1) {
-            _ = self.lazers.checkCollisionsWith(&self.aliens);
-            // game over
-            if (self.aliens.collidingWithPoint(&self.player_pos)) {
-                self.mode = .start_screen;
-                return true;
-            }
+        _ = self.lazers.checkCollisionsWith(&self.aliens);
+        const player_col = self.player.drawCol();
+        var player_point = Point.init(constants.ROWS - 1, player_col);
+        if (self.aliens.collidingWithPoint(&player_point)) {
+            self.mode = .start_screen;
+            return true;
         }
 
         buff.clear();
 
         switch (input) {
-            .j => self.player_pos.moveLeft(),
-            .k => self.player_pos.moveRight(),
             .f => {
                 if (self.ammo > 0) {
-                    _ = self.lazers.spawn(constants.ROWS - 1, self.player_pos.col);
+                    _ = self.lazers.spawn(constants.ROWS - 1, player_col);
                     self.ammo -= 1;
                 }
             },
@@ -211,7 +239,8 @@ pub const GameState = struct {
             else => {},
         }
 
-        buff.set(self.player_pos.row, self.player_pos.col, glyph(.player));
+        self.player.tick(input);
+        buff.set(constants.ROWS - 1, player_col, glyph(.player));
 
         self.lazers.update();
         self.lazers.draw(buff);
