@@ -37,10 +37,6 @@ const OccupancyGridStatus = enum {
     disabled,
 };
 
-const OccupancyGridError = error{
-    Disabled,
-};
-
 pub const EntityPool = struct {
     points: []Point,
     count: usize,
