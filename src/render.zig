@@ -51,10 +51,15 @@ pub const ScreenBuff = struct {
     }
 
     pub fn loadString(self: *ScreenBuff, text: []const u8) !game.Point {
-        var row: usize = 0;
         var lines = std.mem.splitScalar(u8, text, '\n');
         var first_non_empty = game.Point{ .row = 0, .col = 0 };
         var found_first_non_empty = false;
+
+        const line_count = std.mem.count(u8, text, "\n") + 1;
+        var row: usize = 0;
+        if (line_count < self.rows) {
+            row = (self.rows - line_count) / 2;
+        }
 
         while (lines.next()) |line| {
             if (row >= self.rows) break;
