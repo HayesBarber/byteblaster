@@ -27,21 +27,20 @@ pub fn main(init: std.process.Init) !void {
     var guard = try terminal.TerminalGuard.init(stdout_writer);
     defer guard.deinit();
 
-    var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    defer frame_buff.deinit(allocator);
-    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
-    defer prev_buff.deinit(allocator);
-    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
-    defer curr_buff.deinit(allocator);
-
+    var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols, stdout_writer, 0, 0);
     const game_offset = try frame_buff.loadString(constants.frame);
     const offset_r = game_offset.row + 1;
     const offset_c = game_offset.col + 1;
-
-    try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
+    try frame_buff.render();
     try stdout_writer.flush();
+    frame_buff.deinit(allocator);
 
-    try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, stdout_writer, offset_r, offset_c);
+    defer prev_buff.deinit(allocator);
+    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, stdout_writer, offset_r, offset_c);
+    defer curr_buff.deinit(allocator);
+
+    try resetToStartScreen(&prev_buff, &curr_buff);
     try stdout_writer.flush();
     var game_state = game.GameState.init(&io);
 
@@ -52,12 +51,12 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&curr_buff, input)) {
-            try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+            try resetToStartScreen(&prev_buff, &curr_buff);
             try stdout_writer.flush();
             game_state = game.GameState.init(&io);
         }
 
-        try render.renderBuffDiff(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+        try curr_buff.renderDiff(&prev_buff);
         try stdout_writer.flush();
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
@@ -66,10 +65,10 @@ pub fn main(init: std.process.Init) !void {
     }
 }
 
-fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
+fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff) !void {
     curr.clear();
     _ = try curr.loadString(constants.start_screen);
-    try render.renderBuff(curr, writer, r_offset, c_offset);
+    try curr.render();
     @memcpy(prev.data, curr.data);
 }
 

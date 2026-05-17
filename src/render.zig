@@ -25,11 +25,17 @@ pub const ScreenBuff = struct {
     rows: usize,
     cols: usize,
     data: []Cell,
+    writer: *Io.Writer,
+    r_offset: usize,
+    c_offset: usize,
 
     pub fn init(
         allocator: std.mem.Allocator,
         rows: usize,
         cols: usize,
+        writer: *Io.Writer,
+        r_offset: usize,
+        c_offset: usize,
     ) !ScreenBuff {
         const data = try allocator.alloc(Cell, rows * cols);
 
@@ -41,6 +47,9 @@ pub const ScreenBuff = struct {
             .rows = rows,
             .cols = cols,
             .data = data,
+            .writer = writer,
+            .r_offset = r_offset,
+            .c_offset = c_offset,
         };
     }
 
@@ -117,29 +126,31 @@ pub const ScreenBuff = struct {
     pub fn set(self: *ScreenBuff, r: usize, c: usize, text: []const u8) void {
         self.getMut(r, c).set(text);
     }
-};
 
-pub fn renderBuffDiff(prev: *ScreenBuff, curr: *ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
-    for (0..prev.rows) |r| {
-        for (0..prev.cols) |c| {
-            const curr_cell = curr.get(r, c);
-            const prev_cell = prev.get(r, c);
+    pub fn render(self: *const ScreenBuff) !void {
+        for (0..self.rows) |r| {
+            for (0..self.cols) |c| {
+                const curr_cell = self.get(r, c);
 
-            if (!curr_cell.equals(prev_cell)) {
-                try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r + r_offset + 1, c + c_offset + 1 });
-                try writer.writeAll(curr_cell.slice());
+                try terminal.printANSI(self.writer, terminal.ANSICode.move_cursor, .{ r + self.r_offset + 1, c + self.c_offset + 1 });
+                try self.writer.writeAll(curr_cell.slice());
             }
         }
     }
-}
 
-pub fn renderBuff(buff: *ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
-    for (0..buff.rows) |r| {
-        for (0..buff.cols) |c| {
-            const curr_cell = buff.get(r, c);
+    pub fn renderDiff(self: *const ScreenBuff, other: *const ScreenBuff) !void {
+        std.debug.assert(self.rows == other.rows and self.cols == other.cols);
 
-            try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r + r_offset + 1, c + c_offset + 1 });
-            try writer.writeAll(curr_cell.slice());
+        for (0..self.rows) |r| {
+            for (0..self.cols) |c| {
+                const curr_cell = self.get(r, c);
+                const prev_cell = other.get(r, c);
+
+                if (!curr_cell.equals(prev_cell)) {
+                    try terminal.printANSI(self.writer, terminal.ANSICode.move_cursor, .{ r + self.r_offset + 1, c + self.c_offset + 1 });
+                    try self.writer.writeAll(curr_cell.slice());
+                }
+            }
         }
     }
-}
+};
