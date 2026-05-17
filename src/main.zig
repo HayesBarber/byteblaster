@@ -14,23 +14,17 @@ pub fn main(init: std.process.Init) !void {
     const stdout_writer = &stdout_file_writer.interface;
 
     const size = terminal.getSize() catch |e| {
-        switch (e) {
-            error.FailedToGetSize => try stdout_writer.print("Failed to get terminal window size\n", .{}),
-            error.TooFewColumns => try stdout_writer.print("Too few terminal columns\n", .{}),
-            error.TooFewRows => try stdout_writer.print("Too few terminal rows\n", .{}),
-        }
+        const msg = switch (e) {
+            error.FailedToGetSize => "Failed to get terminal window size\n",
+            error.TooFewColumns => "Too few terminal columns\n",
+            error.TooFewRows => "Too few terminal rows\n",
+        };
+        try stdout_writer.writeAll(msg);
         return;
     };
 
-    const original = try terminal.enableRawMode();
-    defer terminal.disableRawMode(original) catch {};
-
-    try terminal.printANSICode(stdout_writer, terminal.ANSICode.hide_cursor);
-    try terminal.printANSICode(stdout_writer, terminal.ANSICode.enter_alternate_buffer);
-    defer {
-        terminal.printANSICode(stdout_writer, terminal.ANSICode.exit_alternate_buffer) catch {};
-        terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
-    }
+    var guard = try terminal.TerminalGuard.init(stdout_writer);
+    defer guard.deinit();
 
     var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
     defer frame_buff.deinit(allocator);
@@ -47,8 +41,8 @@ pub fn main(init: std.process.Init) !void {
     const offset_r = game_offset.row + 1;
     const offset_c = game_offset.col + 1;
 
-    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
-    var game_state = createGameState(&io);
+    try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+    var game_state = game.GameState.init(&io);
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
@@ -57,33 +51,28 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&curr_buff, input)) {
-            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
-            game_state = createGameState(&io);
+            try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
+            game_state = game.GameState.init(&io);
         }
 
         try render.renderBuffDiff(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
-        const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
-        if (elapsed < constants.dt_ns) {
-            const remaining = constants.dt_ns - elapsed;
-            io.sleep(std.Io.Duration.fromNanoseconds(remaining), .awake) catch {};
-        }
+        frameCap(io, frame_start);
     }
 }
 
-fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
+fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
     curr.clear();
     _ = try curr.loadString(constants.start_screen);
     try render.renderBuff(curr, writer, r_offset, c_offset);
     @memcpy(prev.data, curr.data);
 }
 
-fn createGameState(io: *const std.Io) game.GameState {
-    var seed_buffer: [8]u8 = undefined;
-    io.random(&seed_buffer);
-    const seed = std.mem.readInt(u64, &seed_buffer, .little);
-    const game_state = game.GameState.init(seed);
-    return game_state;
+fn frameCap(io: std.Io, frame_start: anytype) void {
+    const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
+    if (elapsed < constants.dt_ns) {
+        io.sleep(std.Io.Duration.fromNanoseconds(constants.dt_ns - elapsed), .awake) catch {};
+    }
 }

@@ -135,3 +135,21 @@ pub fn getSize() TerminalError!WinSize {
 
     return size;
 }
+
+pub const TerminalGuard = struct {
+    original: posix.termios,
+    writer: *Io.Writer,
+
+    pub fn init(writer: *Io.Writer) !TerminalGuard {
+        const original = try enableRawMode();
+        try printANSICode(writer, ANSICode.hide_cursor);
+        try printANSICode(writer, ANSICode.enter_alternate_buffer);
+        return .{ .original = original, .writer = writer };
+    }
+
+    pub fn deinit(self: *TerminalGuard) void {
+        disableRawMode(self.original) catch {};
+        printANSICode(self.writer, ANSICode.exit_alternate_buffer) catch {};
+        printANSICode(self.writer, ANSICode.show_cursor) catch {};
+    }
+};
