@@ -29,6 +29,7 @@ pub const GameState = struct {
     alien_count: usize,
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
+    alien_rows: [ROWS]u64,
 
     pub fn init(seed: u64) GameState {
         return .{
@@ -40,6 +41,7 @@ pub const GameState = struct {
             .alien_count = 0,
             .tick_counter = 0,
             .rng = .init(seed),
+            .alien_rows = undefined,
         };
     }
 
@@ -79,6 +81,7 @@ pub const GameState = struct {
     }
 
     fn updateAliens(self: *GameState) void {
+        self.alien_rows = [_]u64{0} ** ROWS;
         var i: usize = 0;
 
         while (i < self.alien_count) : (i += 1) {
@@ -90,6 +93,7 @@ pub const GameState = struct {
             }
 
             self.aliens[i].row += 1;
+            self.alien_rows[self.aliens[i].row] |= (@as(u64, 1) << @intCast(self.aliens[i].col));
         }
     }
 
@@ -116,8 +120,8 @@ pub const GameState = struct {
     }
 
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
-        self.tick_counter += 1;
         if (self.mode != Mode.playing and input != .space) return;
+        self.tick_counter += 1;
 
         buff.clear();
 
