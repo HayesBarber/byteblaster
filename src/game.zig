@@ -100,11 +100,12 @@ pub const GameState = struct {
     fn spawnLaser(self: *GameState) void {
         if (self.lazer_count >= MAX_LAZERS) return;
 
-        self.lazers[self.lazer_count] = Point.init(ROWS - 2, self.player_col);
+        //spawn at ROWS - 1 since it will get updated this same tick and move to ROWS - 2
+        self.lazers[self.lazer_count] = Point.init(ROWS - 1, self.player_col);
         self.lazer_count += 1;
     }
 
-    pub fn updateLazers(self: *GameState) void {
+    fn updateLazers(self: *GameState) void {
         var i: usize = 0;
 
         while (i < self.lazer_count) : (i += 1) {
@@ -119,9 +120,49 @@ pub const GameState = struct {
         }
     }
 
+    fn checkCollisions(self: *GameState) void {
+        var lazer_i: usize = 0;
+
+        while (lazer_i < self.lazer_count) {
+            const lazer = self.lazers[lazer_i];
+
+            const mask = (@as(u64, 1) << @intCast(lazer.col));
+
+            // collision check
+            if ((self.alien_rows[lazer.row] & mask) != 0) {
+
+                // clear alien bit
+                self.alien_rows[lazer.row] &= ~mask;
+
+                // remove alien
+                var alien_i: usize = 0;
+                while (alien_i < self.alien_count) : (alien_i += 1) {
+                    const alien = self.aliens[alien_i];
+
+                    if (alien.row == lazer.row and alien.col == lazer.col) {
+                        self.aliens[alien_i] = self.aliens[self.alien_count - 1];
+                        self.alien_count -= 1;
+                        break;
+                    }
+                }
+
+                // remove lazer
+                self.lazers[lazer_i] = self.lazers[self.lazer_count - 1];
+                self.lazer_count -= 1;
+                continue;
+            }
+
+            lazer_i += 1;
+        }
+    }
+
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
         if (self.mode != Mode.playing and input != .space) return;
         self.tick_counter += 1;
+
+        if (self.tick_counter > 1) {
+            self.checkCollisions();
+        }
 
         buff.clear();
 
