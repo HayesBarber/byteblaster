@@ -28,18 +28,16 @@ pub fn main(init: std.process.Init) !void {
 
     var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
     defer frame_buff.deinit(allocator);
-    const game_offset = try frame_buff.loadString(constants.frame);
-    try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
-
     var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
+    defer prev_buff.deinit(allocator);
     var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
-    defer {
-        prev_buff.deinit(allocator);
-        curr_buff.deinit(allocator);
-    }
+    defer curr_buff.deinit(allocator);
 
+    const game_offset = try frame_buff.loadString(constants.frame);
     const offset_r = game_offset.row + 1;
     const offset_c = game_offset.col + 1;
+
+    try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
 
     try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
     var game_state = game.GameState.init(&io);
