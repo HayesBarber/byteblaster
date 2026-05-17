@@ -20,27 +20,41 @@ pub const Point = struct {
     }
 };
 
-pub const Direction = enum {
+const Direction = enum {
     up,
     down,
+};
+
+const OccupancyGridStatus = enum {
+    enabled,
+    disabled,
 };
 
 pub const EntityPool = struct {
     points: []Point,
     count: usize,
     direction: Direction,
+    occupancy_grid_status: OccupancyGridStatus,
+    occupancy_grid: [ROWS]u64,
 
-    pub fn init(storage: []Point, direction: Direction) EntityPool {
+    pub fn init(storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
         return .{
             .points = storage,
             .count = 0,
             .direction = direction,
+            .occupancy_grid_status = status,
+            .occupancy_grid = undefined,
         };
     }
 
     pub fn update(self: *EntityPool) void {
+        const grid_enabled = self.occupancy_grid_status == OccupancyGridStatus.enabled;
+        if (grid_enabled) {
+            self.occupancy_grid = [_]u64{0} ** ROWS;
+        }
+
         var i: usize = 0;
-        while (i < self.count) {
+        while (i < self.count) : (i += 1) {
             const at_despawn = switch (self.direction) {
                 .up => self.points[i].row == 0,
                 .down => self.points[i].row == ROWS - 1,
@@ -53,7 +67,10 @@ pub const EntityPool = struct {
                 .up => self.points[i].row -= 1,
                 .down => self.points[i].row += 1,
             }
-            i += 1;
+
+            if (grid_enabled) {
+                self.occupancy_grid[self.points[i].row] |= (@as(u64, 1) << @intCast(self.points[i].col));
+            }
         }
     }
 
@@ -93,7 +110,6 @@ pub const GameState = struct {
     aliens: EntityPool,
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
-    alien_rows: [ROWS]u64,
 
     pub fn init(seed: u64) GameState {
         var state = GameState{
@@ -105,10 +121,9 @@ pub const GameState = struct {
             .aliens = undefined,
             .tick_counter = 0,
             .rng = .init(seed),
-            .alien_rows = undefined,
         };
-        state.lazers = EntityPool.init(&state.lazer_storage, .up);
-        state.aliens = EntityPool.init(&state.alien_storage, .down);
+        state.lazers = EntityPool.init(&state.lazer_storage, .up, .disabled);
+        state.aliens = EntityPool.init(&state.alien_storage, .down, .enabled);
         return state;
     }
 
@@ -124,21 +139,13 @@ pub const GameState = struct {
         }
     }
 
-    fn updateAliens(self: *GameState) void {
-        self.aliens.update();
-        self.alien_rows = [_]u64{0} ** ROWS;
-        for (self.aliens.points[0..self.aliens.count]) |alien| {
-            self.alien_rows[alien.row] |= (@as(u64, 1) << @intCast(alien.col));
-        }
-    }
-
     fn checkLazerCollisions(self: *GameState) void {
         var lazer_i: usize = 0;
         while (lazer_i < self.lazers.count) {
             const lazer = self.lazers.points[lazer_i];
             const mask = (@as(u64, 1) << @intCast(lazer.col));
-            if ((self.alien_rows[lazer.row] & mask) != 0) {
-                self.alien_rows[lazer.row] &= ~mask;
+            if ((self.aliens.occupancy_grid[lazer.row] & mask) != 0) {
+                self.aliens.occupancy_grid[lazer.row] &= ~mask;
                 for (self.aliens.points[0..self.aliens.count], 0..) |alien, i| {
                     if (alien.row == lazer.row and alien.col == lazer.col) {
                         self.aliens.remove(i);
@@ -178,7 +185,7 @@ pub const GameState = struct {
         }
 
         if (self.tick_counter % FPS == 0) {
-            self.updateAliens();
+            self.aliens.update();
             self.aliens.spawnRandom(0, COLS, 5, &self.rng);
         }
         for (self.aliens.points[0..self.aliens.count]) |alien| {
