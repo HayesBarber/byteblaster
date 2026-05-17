@@ -99,8 +99,8 @@ pub const ScreenBuff = struct {
                 self.set(row, col, glyph);
                 if (!found_first_non_empty and !std.mem.eql(u8, glyph, " ")) {
                     found_first_non_empty = true;
-                    first_non_empty.col = col;
-                    first_non_empty.row = row;
+                    first_non_empty.col = col + self.c_offset;
+                    first_non_empty.row = row + self.r_offset;
                 }
                 col += 1;
             }

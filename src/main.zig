@@ -63,22 +63,25 @@ pub fn main(init: std.process.Init) !void {
 
 fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff) !void {
     curr.clear();
-    _ = try curr.loadString(constants.start_screen);
+    _ = try curr.loadString(constants.START_SCREEN);
     try curr.render();
     @memcpy(prev.data, curr.data);
 }
 
 fn frameCap(io: std.Io, frame_start: anytype) void {
     const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
-    if (elapsed < constants.dt_ns) {
-        io.sleep(std.Io.Duration.fromNanoseconds(constants.dt_ns - elapsed), .awake) catch {};
+    if (elapsed < constants.DT_NS) {
+        io.sleep(std.Io.Duration.fromNanoseconds(constants.DT_NS - elapsed), .awake) catch {};
     }
 }
 
 fn printGameFrame(allocator: std.mem.Allocator, writer: *Io.Writer, winsize: terminal.WinSize) !game.Point {
-    var frame_buff: render.ScreenBuff = try .init(allocator, winsize.rows, winsize.cols, writer, 0, 0);
+    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
+    const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
+
+    var frame_buff: render.ScreenBuff = try .init(allocator, constants.FRAME_ROWS, constants.FRAME_COLS, writer, row_offset, col_offset);
     defer frame_buff.deinit(allocator);
-    const game_offset = try frame_buff.loadString(constants.frame);
+    const game_offset = try frame_buff.loadString(constants.GAME_FRAME);
     try frame_buff.render();
     try writer.flush();
 

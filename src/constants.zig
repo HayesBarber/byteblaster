@@ -1,4 +1,4 @@
-pub const dt_ns = 16_666_667;
+pub const DT_NS = 16_666_667;
 pub const FPS = 60;
 pub const ALIEN_SPEED = (FPS / 3);
 
@@ -12,7 +12,7 @@ pub const MAX_ALIENS = 512;
 
 pub const STDOUT_BUFFER_SIZE = (ROWS + 2) * (COLS + 2) * 16;
 
-pub const start_screen =
+pub const START_SCREEN =
     \\█▄▄ █▄█ ▀█▀ █▀▀ █▄▄ █   ▄▀█ █▀▀ ▀█▀ █▀▀ █▀█
     \\█▄█  █   █  ██▄ █▄█ █▄▄ █▀█ ▄▄█  █  ██▄ █▀▄
     \\
@@ -22,10 +22,13 @@ pub const start_screen =
     \\<esc> to exit
 ;
 
-pub const frame = blk: {
+pub const GAME_FRAME = blk: {
     const top = "╭" ++ ("─" ** COLS) ++ "╮\n";
     const mid = "│" ++ (" " ** COLS) ++ "│\n";
     const bot = "╰" ++ ("─" ** COLS) ++ "╯";
 
     break :blk top ++ (mid ** ROWS) ++ bot;
 };
+
+pub const FRAME_ROWS = ROWS + 2;
+pub const FRAME_COLS = COLS + 2;
