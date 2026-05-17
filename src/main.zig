@@ -12,37 +12,32 @@ pub fn main(init: std.process.Init) !void {
 
     var stdout_buf: [constants.STDOUT_BUFFER_SIZE]u8 = undefined;
     var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buf);
-    const stdout_writer = &stdout_file_writer.interface;
+    const writer = &stdout_file_writer.interface;
 
-    const size = terminal.getSize() catch |e| {
+    const winsize = terminal.getSize() catch |e| {
         const msg = switch (e) {
             error.FailedToGetSize => "Failed to get terminal window size\n",
             error.TooFewColumns => "Too few terminal columns\n",
             error.TooFewRows => "Too few terminal rows\n",
         };
-        try stdout_writer.writeAll(msg);
+        try writer.writeAll(msg);
         return;
     };
 
-    var guard = try terminal.TerminalGuard.init(stdout_writer);
+    var guard = try terminal.TerminalGuard.init(writer);
     defer guard.deinit();
 
-    var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    defer frame_buff.deinit(allocator);
-    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
+    const frame_offset = try printGameFrame(allocator, writer, winsize);
+    const offset_r = frame_offset.row + 1;
+    const offset_c = frame_offset.col + 1;
+
+    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
     defer prev_buff.deinit(allocator);
-    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
+    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
     defer curr_buff.deinit(allocator);
 
-    const game_offset = try frame_buff.loadString(constants.frame);
-    const offset_r = game_offset.row + 1;
-    const offset_c = game_offset.col + 1;
-
-    try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
-    try stdout_writer.flush();
-
-    try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
-    try stdout_writer.flush();
+    try resetToStartScreen(&prev_buff, &curr_buff);
+    try writer.flush();
     var game_state = game.GameState.init(&io);
 
     while (true) {
@@ -52,13 +47,13 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&curr_buff, input)) {
-            try resetToStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
-            try stdout_writer.flush();
+            try resetToStartScreen(&prev_buff, &curr_buff);
+            try writer.flush();
             game_state = game.GameState.init(&io);
         }
 
-        try render.renderBuffDiff(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
-        try stdout_writer.flush();
+        try curr_buff.renderDiff(&prev_buff);
+        try writer.flush();
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
@@ -66,16 +61,29 @@ pub fn main(init: std.process.Init) !void {
     }
 }
 
-fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
+fn resetToStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff) !void {
     curr.clear();
-    _ = try curr.loadString(constants.start_screen);
-    try render.renderBuff(curr, writer, r_offset, c_offset);
+    _ = try curr.loadString(constants.START_SCREEN);
+    try curr.render();
     @memcpy(prev.data, curr.data);
 }
 
 fn frameCap(io: std.Io, frame_start: anytype) void {
     const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
-    if (elapsed < constants.dt_ns) {
-        io.sleep(std.Io.Duration.fromNanoseconds(constants.dt_ns - elapsed), .awake) catch {};
+    if (elapsed < constants.DT_NS) {
+        io.sleep(std.Io.Duration.fromNanoseconds(constants.DT_NS - elapsed), .awake) catch {};
     }
+}
+
+fn printGameFrame(allocator: std.mem.Allocator, writer: *Io.Writer, winsize: terminal.WinSize) !game.Point {
+    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
+    const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
+
+    var frame_buff: render.ScreenBuff = try .init(allocator, constants.FRAME_ROWS, constants.FRAME_COLS, writer, row_offset, col_offset);
+    defer frame_buff.deinit(allocator);
+    const game_offset = try frame_buff.loadString(constants.GAME_FRAME);
+    try frame_buff.render();
+    try writer.flush();
+
+    return game_offset;
 }
