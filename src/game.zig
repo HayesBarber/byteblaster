@@ -30,6 +30,10 @@ const OccupancyGridStatus = enum {
     disabled,
 };
 
+const OccupancyGridError = error{
+    Disabled,
+};
+
 pub const EntityPool = struct {
     points: []Point,
     count: usize,
@@ -99,6 +103,31 @@ pub const EntityPool = struct {
             spawned += 1;
         }
     }
+
+    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) OccupancyGridError!void {
+        if (other.occupancy_grid_status != OccupancyGridStatus.enabled) {
+            return error.Disabled;
+        }
+
+        var i: usize = 0;
+
+        while (i < self.count) {
+            const point = self.points[i];
+            const mask = (@as(u64, 1) << @intCast(point.col));
+            if ((other.occupancy_grid[point.row] & mask) != 0) {
+                other.occupancy_grid[point.row] &= ~mask;
+                for (other.points[0..other.count], 0..) |other_point, j| {
+                    if (other_point.row == point.row and other_point.col == point.col) {
+                        other.remove(j);
+                        break;
+                    }
+                }
+                self.remove(i);
+                continue;
+            }
+            i += 1;
+        }
+    }
 };
 
 pub const GameState = struct {
@@ -139,32 +168,12 @@ pub const GameState = struct {
         }
     }
 
-    fn checkLazerCollisions(self: *GameState) void {
-        var lazer_i: usize = 0;
-        while (lazer_i < self.lazers.count) {
-            const lazer = self.lazers.points[lazer_i];
-            const mask = (@as(u64, 1) << @intCast(lazer.col));
-            if ((self.aliens.occupancy_grid[lazer.row] & mask) != 0) {
-                self.aliens.occupancy_grid[lazer.row] &= ~mask;
-                for (self.aliens.points[0..self.aliens.count], 0..) |alien, i| {
-                    if (alien.row == lazer.row and alien.col == lazer.col) {
-                        self.aliens.remove(i);
-                        break;
-                    }
-                }
-                self.lazers.remove(lazer_i);
-                continue;
-            }
-            lazer_i += 1;
-        }
-    }
-
     pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
         if (self.mode != Mode.playing and input != .space) return;
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
-            self.checkLazerCollisions();
+            self.lazers.checkCollisionsWith(&self.aliens) catch {};
         }
 
         buff.clear();
