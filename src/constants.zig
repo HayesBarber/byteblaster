@@ -10,7 +10,8 @@ pub const MIN_COLS = COLS + 8;
 pub const MAX_LAZERS = 64;
 pub const MAX_ALIENS = 512;
 
-pub const STDOUT_BUFFER_SIZE = (ROWS + 2) * (COLS + 2) * 16;
+// ~14 B per cell (ANSI escape + content) for a full playfield render
+pub const STDOUT_BUFFER_SIZE = ROWS * COLS * 16;
 
 pub const START_SCREEN =
     \\█▄▄ █▄█ ▀█▀ █▀▀ █▄▄ █   ▄▀█ █▀▀ ▀█▀ █▀▀ █▀█
