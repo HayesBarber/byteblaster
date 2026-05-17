@@ -8,6 +8,8 @@ const COLS = terminal.MIN_COLS;
 const MAX_LAZERS = 64;
 const MAX_ALIENS = 512;
 
+const ALIEN_SPEED = (FPS / 3);
+
 pub const Point = struct {
     row: usize,
     col: usize,
@@ -18,186 +20,215 @@ pub const Point = struct {
             .col = col,
         };
     }
+
+    fn moveLeft(self: *Point) void {
+        if (self.col > 0) {
+            self.col -= 1;
+        }
+    }
+
+    fn moveRight(self: *Point) void {
+        if (self.col + 1 < COLS) {
+            self.col += 1;
+        }
+    }
 };
 
-pub const GameState = struct {
-    player_col: usize,
-    mode: Mode,
-    lazers: [MAX_LAZERS]Point,
-    lazer_count: usize,
-    aliens: [MAX_ALIENS]Point,
-    alien_count: usize,
-    tick_counter: u64,
-    rng: std.Random.DefaultPrng,
-    alien_rows: [ROWS]u64,
+const Direction = enum {
+    up,
+    down,
+};
 
-    pub fn init(seed: u64) GameState {
+const OccupancyGridStatus = enum {
+    enabled,
+    disabled,
+};
+
+const OccupancyGridError = error{
+    Disabled,
+};
+
+pub const EntityPool = struct {
+    points: []Point,
+    count: usize,
+    direction: Direction,
+    occupancy_grid_status: OccupancyGridStatus,
+    occupancy_grid: [ROWS]u64,
+    entity: Entity,
+
+    pub fn init(entity: Entity, storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
         return .{
-            .player_col = COLS / 2,
-            .mode = .start_screen,
-            .lazers = undefined,
-            .lazer_count = 0,
-            .aliens = undefined,
-            .alien_count = 0,
-            .tick_counter = 0,
-            .rng = .init(seed),
-            .alien_rows = undefined,
+            .entity = entity,
+            .points = storage,
+            .count = 0,
+            .direction = direction,
+            .occupancy_grid_status = status,
+            .occupancy_grid = undefined,
         };
     }
 
-    fn moveLeft(self: *GameState) void {
-        if (self.player_col > 0) {
-            self.player_col -= 1;
+    pub fn draw(self: *EntityPool, buff: *render.ScreenBuff) void {
+        for (self.points[0..self.count]) |point| {
+            buff.set(point.row, point.col, glyph(self.entity));
         }
     }
 
-    fn moveRight(self: *GameState) void {
-        if (self.player_col + 1 < COLS) {
-            self.player_col += 1;
+    pub fn update(self: *EntityPool) void {
+        const grid_enabled = self.occupancy_grid_status == OccupancyGridStatus.enabled;
+        if (grid_enabled) {
+            self.occupancy_grid = [_]u64{0} ** ROWS;
+        }
+
+        var i: usize = 0;
+        while (i < self.count) : (i += 1) {
+            const at_despawn = switch (self.direction) {
+                .up => self.points[i].row == 0,
+                .down => self.points[i].row == ROWS - 1,
+            };
+            if (at_despawn) {
+                self.remove(i);
+                continue;
+            }
+            switch (self.direction) {
+                .up => self.points[i].row -= 1,
+                .down => self.points[i].row += 1,
+            }
+
+            if (grid_enabled) {
+                self.occupancy_grid[self.points[i].row] |= (@as(u64, 1) << @intCast(self.points[i].col));
+            }
         }
     }
 
-    fn randomCol(self: *GameState) usize {
-        return self.rng.random().intRangeAtMost(usize, 0, COLS - 1);
+    pub fn remove(self: *EntityPool, index: usize) void {
+        self.points[index] = self.points[self.count - 1];
+        self.count -= 1;
     }
 
-    fn spawnAliens(self: *GameState) void {
+    pub fn spawn(self: *EntityPool, row: usize, col: usize) bool {
+        if (self.count >= self.points.len) return false;
+        self.points[self.count] = Point.init(row, col);
+        self.count += 1;
+        return true;
+    }
+
+    pub fn spawnRandom(self: *EntityPool, row: usize, cols: usize, count: usize, rng: *std.Random.DefaultPrng) void {
         var mask: u64 = 0;
         var spawned: usize = 0;
-
-        while (spawned < 5 and self.alien_count < MAX_ALIENS) {
-            const col = self.randomCol();
-
+        while (spawned < count and self.count < self.points.len) {
+            const col = rng.random().intRangeAtMost(usize, 0, cols - 1);
             const bit: u64 = @as(u64, 1) << @intCast(col);
             if ((mask & bit) != 0) continue;
-
             mask |= bit;
-
-            self.aliens[self.alien_count] = Point.init(0, col);
-            self.alien_count += 1;
-
+            self.points[self.count] = Point.init(row, col);
+            self.count += 1;
             spawned += 1;
         }
     }
 
-    fn updateAliens(self: *GameState) void {
-        self.alien_rows = [_]u64{0} ** ROWS;
+    pub fn collidingWithPoint(self: *EntityPool, point: *Point) bool {
+        std.debug.assert(self.occupancy_grid_status == OccupancyGridStatus.enabled);
+
+        const mask = (@as(u64, 1) << @intCast(point.col));
+        return (self.occupancy_grid[point.row] & mask) != 0;
+    }
+
+    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) u16 {
+        std.debug.assert(other.occupancy_grid_status == OccupancyGridStatus.enabled);
+
         var i: usize = 0;
+        var collisions: u16 = 0;
 
-        while (i < self.alien_count) : (i += 1) {
-            if (self.aliens[i].row == ROWS - 1) {
-                // remove by swapping with last
-                self.aliens[i] = self.aliens[self.alien_count - 1];
-                self.alien_count -= 1;
-                continue;
-            }
-
-            self.aliens[i].row += 1;
-            self.alien_rows[self.aliens[i].row] |= (@as(u64, 1) << @intCast(self.aliens[i].col));
-        }
-    }
-
-    fn spawnLaser(self: *GameState) void {
-        if (self.lazer_count >= MAX_LAZERS) return;
-
-        //spawn at ROWS - 1 since it will get updated this same tick and move to ROWS - 2
-        self.lazers[self.lazer_count] = Point.init(ROWS - 1, self.player_col);
-        self.lazer_count += 1;
-    }
-
-    fn updateLazers(self: *GameState) void {
-        var i: usize = 0;
-
-        while (i < self.lazer_count) : (i += 1) {
-            if (self.lazers[i].row == 0) {
-                // remove by swapping with last
-                self.lazers[i] = self.lazers[self.lazer_count - 1];
-                self.lazer_count -= 1;
-                continue;
-            }
-
-            self.lazers[i].row -= 1;
-        }
-    }
-
-    fn checkLazerCollisions(self: *GameState) void {
-        var lazer_i: usize = 0;
-
-        while (lazer_i < self.lazer_count) {
-            const lazer = self.lazers[lazer_i];
-
-            const mask = (@as(u64, 1) << @intCast(lazer.col));
-
-            // collision check
-            if ((self.alien_rows[lazer.row] & mask) != 0) {
-
-                // clear alien bit
-                self.alien_rows[lazer.row] &= ~mask;
-
-                // remove alien
-                var alien_i: usize = 0;
-                while (alien_i < self.alien_count) : (alien_i += 1) {
-                    const alien = self.aliens[alien_i];
-
-                    if (alien.row == lazer.row and alien.col == lazer.col) {
-                        self.aliens[alien_i] = self.aliens[self.alien_count - 1];
-                        self.alien_count -= 1;
+        while (i < self.count) {
+            const point = self.points[i];
+            const mask = (@as(u64, 1) << @intCast(point.col));
+            if ((other.occupancy_grid[point.row] & mask) != 0) {
+                other.occupancy_grid[point.row] &= ~mask;
+                for (other.points[0..other.count], 0..) |other_point, j| {
+                    if (other_point.row == point.row and other_point.col == point.col) {
+                        other.remove(j);
                         break;
                     }
                 }
-
-                // remove lazer
-                self.lazers[lazer_i] = self.lazers[self.lazer_count - 1];
-                self.lazer_count -= 1;
+                self.remove(i);
+                collisions += 1;
                 continue;
             }
-
-            lazer_i += 1;
+            i += 1;
         }
+
+        return collisions;
+    }
+};
+
+pub const GameState = struct {
+    player_pos: Point,
+    mode: Mode,
+    lazer_storage: [MAX_LAZERS]Point,
+    alien_storage: [MAX_ALIENS]Point,
+    lazers: EntityPool,
+    aliens: EntityPool,
+    tick_counter: u64,
+    rng: std.Random.DefaultPrng,
+
+    pub fn init(seed: u64) GameState {
+        var state = GameState{
+            .player_pos = Point.init(ROWS - 1, COLS / 2),
+            .mode = .start_screen,
+            .lazer_storage = undefined,
+            .alien_storage = undefined,
+            .lazers = undefined,
+            .aliens = undefined,
+            .tick_counter = 0,
+            .rng = .init(seed),
+        };
+        state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
+        state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
+        return state;
     }
 
-    pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) void {
-        if (self.mode != Mode.playing and input != .space) return;
+    pub fn tick(self: *GameState, buff: *render.ScreenBuff, input: terminal.GameInput) bool {
+        if (self.mode != Mode.playing and input != .space) return false;
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
-            self.checkLazerCollisions();
+            _ = self.lazers.checkCollisionsWith(&self.aliens);
+            // game over
+            if (self.aliens.collidingWithPoint(&self.player_pos)) {
+                self.mode = .start_screen;
+                return true;
+            }
         }
 
         buff.clear();
 
         switch (input) {
-            .j => self.moveLeft(),
-            .k => self.moveRight(),
-            .f => self.spawnLaser(),
+            .j => self.player_pos.moveLeft(),
+            .k => self.player_pos.moveRight(),
+            .f => _ = self.lazers.spawn(ROWS - 1, self.player_pos.col),
             .space => self.mode = .playing,
             else => {},
         }
 
-        // update player
-        buff.set(buff.rows - 1, self.player_col, glyph(.player));
+        buff.set(self.player_pos.row, self.player_pos.col, glyph(.player));
 
-        //update lazers
-        self.updateLazers();
-        for (self.lazers[0..self.lazer_count]) |l| {
-            buff.set(l.row, l.col, glyph(.laser));
-        }
+        self.lazers.update();
+        self.lazers.draw(buff);
 
-        //update aliens
-        if (self.tick_counter % FPS == 0) {
-            self.updateAliens();
-            self.spawnAliens();
+        if (self.tick_counter % ALIEN_SPEED == 0) {
+            self.aliens.update();
+            self.aliens.spawnRandom(0, COLS, 5, &self.rng);
         }
-        for (self.aliens[0..self.alien_count]) |alien| {
-            buff.set(alien.row, alien.col, glyph(.alien));
-        }
+        self.aliens.draw(buff);
+
+        return false;
     }
 };
 
 pub const Entity = enum {
     player,
     alien,
-    laser,
+    lazer,
     empty,
 };
 
@@ -205,7 +236,7 @@ pub fn glyph(e: Entity) []const u8 {
     return switch (e) {
         .player => "▲",
         .alien => "■",
-        .laser => "│",
+        .lazer => "│",
         .empty => " ",
     };
 }
@@ -213,5 +244,4 @@ pub fn glyph(e: Entity) []const u8 {
 pub const Mode = enum {
     start_screen,
     playing,
-    game_over,
 };
