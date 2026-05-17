@@ -22,3 +22,11 @@ pub const start_screen =
     \\<f> to fire
     \\<esc> to exit
 ;
+
+pub const frame = blk: {
+    const top = "┌" ++ ("─" ** COLS) ++ "┐\n";
+    const mid = "│" ++ (" " ** COLS) ++ "│\n";
+    const bot = "└" ++ ("─" ** COLS) ++ "┘";
+
+    break :blk top ++ (mid ** ROWS) ++ bot;
+};
