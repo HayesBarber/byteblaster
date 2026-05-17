@@ -104,12 +104,13 @@ pub const EntityPool = struct {
         }
     }
 
-    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) OccupancyGridError!void {
+    pub fn checkCollisionsWith(self: *EntityPool, other: *EntityPool) OccupancyGridError!u16 {
         if (other.occupancy_grid_status != OccupancyGridStatus.enabled) {
             return error.Disabled;
         }
 
         var i: usize = 0;
+        var collisions: u16 = 0;
 
         while (i < self.count) {
             const point = self.points[i];
@@ -123,10 +124,13 @@ pub const EntityPool = struct {
                     }
                 }
                 self.remove(i);
+                collisions += 1;
                 continue;
             }
             i += 1;
         }
+
+        return collisions;
     }
 };
 
@@ -173,7 +177,7 @@ pub const GameState = struct {
         self.tick_counter += 1;
 
         if (self.tick_counter > 1) {
-            self.lazers.checkCollisionsWith(&self.aliens) catch {};
+            _ = self.lazers.checkCollisionsWith(&self.aliens) catch {};
         }
 
         buff.clear();
