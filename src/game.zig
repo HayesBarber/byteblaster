@@ -1,4 +1,5 @@
 const std = @import("std");
+const Io = std.Io;
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const constants = @import("constants.zig");
@@ -160,7 +161,11 @@ pub const GameState = struct {
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
 
-    pub fn init(seed: u64) GameState {
+    pub fn init(io: *const std.Io) GameState {
+        var seed_buffer: [8]u8 = undefined;
+        io.random(&seed_buffer);
+        const seed = std.mem.readInt(u64, &seed_buffer, .little);
+
         var state = GameState{
             .player_pos = Point.init(constants.ROWS - 1, constants.COLS / 2),
             .mode = .start_screen,
