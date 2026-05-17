@@ -4,24 +4,11 @@ const Io = std.Io;
 const terminal = @import("terminal.zig");
 const render = @import("render.zig");
 const game = @import("game.zig");
-
-const dt_ns = 16_666_667;
-pub const FPS = 60;
-const start_screen =
-    \\
-    \\
-    \\
-    \\█▄▄ █▄█ ▀█▀ █▀▀ █▄▄ █   ▄▀█ █▀▀ ▀█▀ █▀▀ █▀█
-    \\█▄█  █   █  ██▄ █▄█ █▄▄ █▀█ ▄▄█  █  ██▄ █▀▄
-    \\
-    \\Press <Space> to start
-    \\<j> and <k> to move left and right
-    \\<f> to fire
-    \\<esc> to exit
-;
+const constants = @import("constants.zig");
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
+    const allocator = init.gpa;
 
     var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &.{});
     const stdout_writer = &stdout_file_writer.interface;
@@ -45,15 +32,22 @@ pub fn main(init: std.process.Init) !void {
         terminal.printANSICode(stdout_writer, terminal.ANSICode.show_cursor) catch {};
     }
 
-    const allocator = init.gpa;
-    var prev_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
-    var curr_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
+    var frame_buff: render.ScreenBuff = try .init(allocator, size.rows, size.cols);
+    defer frame_buff.deinit(allocator);
+    const game_offset = try frame_buff.loadString(constants.frame);
+    try render.renderBuff(&frame_buff, stdout_writer, 0, 0);
+
+    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
+    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS);
     defer {
         prev_buff.deinit(allocator);
         curr_buff.deinit(allocator);
     }
 
-    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+    const offset_r = game_offset.row + 1;
+    const offset_c = game_offset.col + 1;
+
+    try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
     var game_state = createGameState(&io);
 
     while (true) {
@@ -63,26 +57,26 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&curr_buff, input)) {
-            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer);
+            try loadStartScreen(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
             game_state = createGameState(&io);
         }
 
-        try render.renderBuff(&prev_buff, &curr_buff, stdout_writer);
+        try render.renderBuffDiff(&prev_buff, &curr_buff, stdout_writer, offset_r, offset_c);
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 
         const elapsed = std.Io.Timestamp.now(io, .real).toNanoseconds() - frame_start;
-        if (elapsed < dt_ns) {
-            const remaining = dt_ns - elapsed;
+        if (elapsed < constants.dt_ns) {
+            const remaining = constants.dt_ns - elapsed;
             io.sleep(std.Io.Duration.fromNanoseconds(remaining), .awake) catch {};
         }
     }
 }
 
-fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer) !void {
+fn loadStartScreen(prev: *render.ScreenBuff, curr: *render.ScreenBuff, writer: *Io.Writer, r_offset: usize, c_offset: usize) !void {
     curr.clear();
-    try curr.loadString(start_screen);
-    try render.renderBuff(prev, curr, writer);
+    _ = try curr.loadString(constants.start_screen);
+    try render.renderBuff(curr, writer, r_offset, c_offset);
     @memcpy(prev.data, curr.data);
 }
 

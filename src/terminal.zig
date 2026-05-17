@@ -1,9 +1,8 @@
 const std = @import("std");
 const Io = std.Io;
 const posix = std.posix;
-
-pub const MIN_ROWS = 24;
-pub const MIN_COLS = 48;
+const game = @import("game.zig");
+const constants = @import("constants.zig");
 
 pub const ANSICode = enum {
     enter_alternate_buffer,
@@ -123,18 +122,16 @@ pub fn getSize() TerminalError!WinSize {
 
     if (posix.errno(err) != .SUCCESS) {
         return TerminalError.FailedToGetSize;
+    } else if (winsize.col < constants.MIN_COLS) {
+        return TerminalError.TooFewColumns;
+    } else if (winsize.row < constants.MIN_ROWS) {
+        return TerminalError.TooFewRows;
     }
 
     const size = WinSize{
-        .cols = @min(winsize.col, MIN_COLS),
-        .rows = @min(winsize.row, MIN_ROWS),
+        .cols = winsize.col,
+        .rows = winsize.row,
     };
-
-    if (size.cols < MIN_COLS) {
-        return TerminalError.TooFewColumns;
-    } else if (size.rows < MIN_ROWS) {
-        return TerminalError.TooFewRows;
-    }
 
     return size;
 }

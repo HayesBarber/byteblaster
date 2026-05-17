@@ -1,14 +1,7 @@
 const std = @import("std");
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
-const FPS = @import("main.zig").FPS;
-const ROWS = terminal.MIN_ROWS;
-const COLS = terminal.MIN_COLS;
-
-const MAX_LAZERS = 64;
-const MAX_ALIENS = 512;
-
-const ALIEN_SPEED = (FPS / 3);
+const constants = @import("constants.zig");
 
 pub const Point = struct {
     row: usize,
@@ -28,7 +21,7 @@ pub const Point = struct {
     }
 
     fn moveRight(self: *Point) void {
-        if (self.col + 1 < COLS) {
+        if (self.col + 1 < constants.COLS) {
             self.col += 1;
         }
     }
@@ -44,16 +37,12 @@ const OccupancyGridStatus = enum {
     disabled,
 };
 
-const OccupancyGridError = error{
-    Disabled,
-};
-
 pub const EntityPool = struct {
     points: []Point,
     count: usize,
     direction: Direction,
     occupancy_grid_status: OccupancyGridStatus,
-    occupancy_grid: [ROWS]u64,
+    occupancy_grid: [constants.ROWS]u64,
     entity: Entity,
 
     pub fn init(entity: Entity, storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
@@ -63,7 +52,7 @@ pub const EntityPool = struct {
             .count = 0,
             .direction = direction,
             .occupancy_grid_status = status,
-            .occupancy_grid = undefined,
+            .occupancy_grid = if (status == OccupancyGridStatus.enabled) [_]u64{0} ** constants.ROWS else undefined,
         };
     }
 
@@ -76,14 +65,14 @@ pub const EntityPool = struct {
     pub fn update(self: *EntityPool) void {
         const grid_enabled = self.occupancy_grid_status == OccupancyGridStatus.enabled;
         if (grid_enabled) {
-            self.occupancy_grid = [_]u64{0} ** ROWS;
+            self.occupancy_grid = [_]u64{0} ** constants.ROWS;
         }
 
         var i: usize = 0;
         while (i < self.count) : (i += 1) {
             const at_despawn = switch (self.direction) {
                 .up => self.points[i].row == 0,
-                .down => self.points[i].row == ROWS - 1,
+                .down => self.points[i].row == constants.ROWS - 1,
             };
             if (at_despawn) {
                 self.remove(i);
@@ -164,8 +153,8 @@ pub const EntityPool = struct {
 pub const GameState = struct {
     player_pos: Point,
     mode: Mode,
-    lazer_storage: [MAX_LAZERS]Point,
-    alien_storage: [MAX_ALIENS]Point,
+    lazer_storage: [constants.MAX_LAZERS]Point,
+    alien_storage: [constants.MAX_ALIENS]Point,
     lazers: EntityPool,
     aliens: EntityPool,
     tick_counter: u64,
@@ -173,7 +162,7 @@ pub const GameState = struct {
 
     pub fn init(seed: u64) GameState {
         var state = GameState{
-            .player_pos = Point.init(ROWS - 1, COLS / 2),
+            .player_pos = Point.init(constants.ROWS - 1, constants.COLS / 2),
             .mode = .start_screen,
             .lazer_storage = undefined,
             .alien_storage = undefined,
@@ -205,7 +194,7 @@ pub const GameState = struct {
         switch (input) {
             .j => self.player_pos.moveLeft(),
             .k => self.player_pos.moveRight(),
-            .f => _ = self.lazers.spawn(ROWS - 1, self.player_pos.col),
+            .f => _ = self.lazers.spawn(constants.ROWS - 1, self.player_pos.col),
             .space => self.mode = .playing,
             else => {},
         }
@@ -215,9 +204,9 @@ pub const GameState = struct {
         self.lazers.update();
         self.lazers.draw(buff);
 
-        if (self.tick_counter % ALIEN_SPEED == 0) {
+        if (self.tick_counter % constants.ALIEN_SPEED == 0) {
             self.aliens.update();
-            self.aliens.spawnRandom(0, COLS, 5, &self.rng);
+            self.aliens.spawnRandom(0, constants.COLS, 5, &self.rng);
         }
         self.aliens.draw(buff);
 
