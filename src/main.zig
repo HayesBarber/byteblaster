@@ -6,6 +6,7 @@ const render = @import("render.zig");
 const game = @import("game.zig");
 
 const dt_ns = 16_666_667;
+pub const FPS = 60;
 const start_screen =
     \\
     \\

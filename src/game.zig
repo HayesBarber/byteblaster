@@ -1,6 +1,7 @@
 const std = @import("std");
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
+const FPS = @import("main.zig").FPS;
 
 const MAX_LAZERS = 64;
 const MAX_ALIENS = 512;
@@ -140,7 +141,7 @@ pub const GameState = struct {
         }
 
         //update aliens
-        if (self.tick_counter % 60 == 0) {
+        if (self.tick_counter % FPS == 0) {
             self.updateAliens();
             self.spawnAliens();
         }
