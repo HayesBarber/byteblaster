@@ -38,6 +38,10 @@ pub fn main(init: std.process.Init) !void {
 
     try resetToStartScreen(&prev_buff, &curr_buff);
     try writer.flush();
+
+    var stats_buff = try createStatsBuffer(allocator, writer, frame_offset);
+    defer stats_buff.deinit(allocator);
+
     var game_state = game.GameState.init(&io);
 
     while (true) {
@@ -90,4 +94,20 @@ fn printGameFrame(allocator: std.mem.Allocator, writer: *Io.Writer, winsize: ter
     try writer.flush();
 
     return game_offset;
+}
+
+fn createStatsBuffer(allocator: std.mem.Allocator, writer: *Io.Writer, game_offset: game.Point) !render.ScreenBuff {
+    var stats_buff: render.ScreenBuff = try .init(
+        allocator,
+        constants.STATS_FRAME_ROWS,
+        constants.STATS_FRAME_COLS,
+        writer,
+        game_offset.row,
+        game_offset.col + constants.GAME_COLS + 2,
+    );
+    _ = try stats_buff.loadString(constants.STATS_FRAME);
+    try stats_buff.render();
+    try writer.flush();
+
+    return stats_buff;
 }

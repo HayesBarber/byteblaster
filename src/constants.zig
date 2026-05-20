@@ -5,10 +5,10 @@ pub const RELOAD_SPEED = (FPS / 1);
 
 pub const GAME_ROWS = 24;
 pub const GAME_COLS = 48;
-pub const STATS_ROWS = 12;
-pub const STATS_COLS = 24;
+pub const STATS_ROWS = 3;
+pub const STATS_COLS = 12;
 pub const MIN_ROWS = GAME_ROWS + 8;
-pub const MIN_COLS = GAME_COLS + 8;
+pub const MIN_COLS = GAME_COLS + STATS_COLS + 8;
 
 pub const MAX_LAZERS = 64;
 pub const MAX_ALIENS = 512;
@@ -45,3 +45,5 @@ pub const STATS_FRAME = blk: {
 
 pub const FRAME_ROWS = GAME_ROWS + 2;
 pub const FRAME_COLS = GAME_COLS + 2;
+pub const STATS_FRAME_ROWS = STATS_ROWS + 2;
+pub const STATS_FRAME_COLS = STATS_COLS + 2;
