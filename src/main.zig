@@ -31,9 +31,9 @@ pub fn main(init: std.process.Init) !void {
     const offset_r = frame_offset.row + 1;
     const offset_c = frame_offset.col + 1;
 
-    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
+    var prev_buff: render.ScreenBuff = try .init(allocator, constants.GAME_ROWS, constants.GAME_COLS, writer, offset_r, offset_c);
     defer prev_buff.deinit(allocator);
-    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
+    var curr_buff: render.ScreenBuff = try .init(allocator, constants.GAME_ROWS, constants.GAME_COLS, writer, offset_r, offset_c);
     defer curr_buff.deinit(allocator);
 
     try resetToStartScreen(&prev_buff, &curr_buff);
@@ -56,6 +56,10 @@ pub fn main(init: std.process.Init) !void {
         try writer.flush();
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
+
+        if (game_state.mode == .playing) {
+            curr_buff.clear();
+        }
 
         frameCap(io, frame_start);
     }
