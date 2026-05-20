@@ -161,6 +161,7 @@ pub const GameState = struct {
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
     ammo: u8,
+    score: usize,
 
     pub fn init(io: *const std.Io) GameState {
         var seed_buffer: [8]u8 = undefined;
@@ -177,6 +178,7 @@ pub const GameState = struct {
             .tick_counter = 0,
             .rng = .init(seed),
             .ammo = constants.MAX_AMMO,
+            .score = 0,
         };
         state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
         state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
@@ -219,6 +221,7 @@ pub const GameState = struct {
         if (self.tick_counter % constants.ALIEN_SPEED == 0) {
             self.aliens.update();
             self.aliens.spawnRandom(0, constants.COLS, 5, &self.rng);
+            self.score += 1;
         } else {
             self.lazers.update();
         }
