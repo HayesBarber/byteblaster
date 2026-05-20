@@ -27,6 +27,12 @@ pub const START_SCREEN =
     \\<esc> to exit
 ;
 
+pub const STATS =
+    \\Ammo: {d}
+    \\Score: {d}
+    \\Level: {d}
+;
+
 pub const GAME_FRAME = blk: {
     const top = "╭" ++ ("─" ** GAME_COLS) ++ "╮\n";
     const mid = "│" ++ (" " ** GAME_COLS) ++ "│\n";

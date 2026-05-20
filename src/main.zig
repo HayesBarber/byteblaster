@@ -39,10 +39,15 @@ pub fn main(init: std.process.Init) !void {
     try resetToStartScreen(&prev_buff, &curr_buff);
     try writer.flush();
 
+    var game_state = game.GameState.init(&io);
+
     var stats_buff = try createStatsBuffer(allocator, writer, frame_offset);
     defer stats_buff.deinit(allocator);
 
-    var game_state = game.GameState.init(&io);
+    var stats_str_buf: [constants.STATS.len * 2]u8 = undefined;
+    _ = try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+    try stats_buff.render();
+    try writer.flush();
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
@@ -56,8 +61,14 @@ pub fn main(init: std.process.Init) !void {
             game_state = game.GameState.init(&io);
         }
 
-        try curr_buff.renderDiff(&prev_buff);
-        try writer.flush();
+        if (game_state.mode == .playing) {
+            try curr_buff.renderDiff(&prev_buff);
+            try writer.flush();
+
+            _ = try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+            try stats_buff.render();
+            try writer.flush();
+        }
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
 

@@ -162,6 +162,7 @@ pub const GameState = struct {
     rng: std.Random.DefaultPrng,
     ammo: u8,
     score: usize,
+    level: usize,
 
     pub fn init(io: *const std.Io) GameState {
         var seed_buffer: [8]u8 = undefined;
@@ -179,6 +180,7 @@ pub const GameState = struct {
             .rng = .init(seed),
             .ammo = constants.MAX_AMMO,
             .score = 0,
+            .level = 0,
         };
         state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
         state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
@@ -227,6 +229,18 @@ pub const GameState = struct {
         self.lazers.draw(buff);
 
         return false;
+    }
+
+    pub fn scoreStr(self: *GameState, buf: []u8) ![]u8 {
+        return std.fmt.bufPrint(
+            buf,
+            constants.STATS,
+            .{
+                self.ammo,
+                self.score,
+                self.level,
+            },
+        );
     }
 };
 
