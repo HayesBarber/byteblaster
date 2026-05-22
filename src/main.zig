@@ -31,6 +31,8 @@ pub fn main(init: std.process.Init) !void {
     const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
     var game_buff: render.ScreenBuff = try .init(allocator, writer, row_offset, col_offset, constants.GAME_FRAME);
     defer game_buff.deinit(allocator);
+    try game_buff.loadString(constants.START_SCREEN);
+    try game_buff.renderDiff();
 
     var game_state = game.GameState.init(&io);
 
@@ -41,7 +43,8 @@ pub fn main(init: std.process.Init) !void {
         if (input == .esc) break;
 
         if (game_state.tick(&game_buff, input)) {
-            //todo reset
+            try game_buff.loadString(constants.START_SCREEN);
+            try game_buff.renderDiff();
             game_state = game.GameState.init(&io);
         }
 

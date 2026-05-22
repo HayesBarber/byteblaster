@@ -105,4 +105,47 @@ pub const ScreenBuff = struct {
         std.mem.swap([]Cell, &self.prev, &self.curr);
         self.clear();
     }
+
+    pub fn loadString(self: *ScreenBuff, text: []const u8) !void {
+        var lines = std.mem.splitScalar(u8, text, '\n');
+
+        const line_count = std.mem.count(u8, text, "\n") + 1;
+        var row: usize = 0;
+        if (line_count < self.rows) {
+            row = (self.rows - line_count) / 2;
+        }
+
+        while (lines.next()) |line| {
+            if (row >= self.rows) break;
+
+            // count UTF-8 glyphs in this line
+            var view = std.unicode.Utf8View.initUnchecked(line);
+            var it = view.iterator();
+
+            var glyph_count: usize = 0;
+            while (it.nextCodepointSlice()) |_| {
+                glyph_count += 1;
+            }
+
+            const pad = if (glyph_count < self.cols)
+                (self.cols - glyph_count) / 2
+            else
+                0;
+
+            var col: usize = pad;
+
+            // reset iterator for actual write
+            view = std.unicode.Utf8View.initUnchecked(line);
+            it = view.iterator();
+
+            while (it.nextCodepointSlice()) |glyph| {
+                if (col >= self.cols) break;
+
+                self.set(row, col, glyph);
+                col += 1;
+            }
+
+            row += 1;
+        }
+    }
 };
