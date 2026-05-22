@@ -31,14 +31,23 @@ pub fn main(init: std.process.Init) !void {
     const offset_r = frame_offset.row + 1;
     const offset_c = frame_offset.col + 1;
 
-    var prev_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
+    var prev_buff: render.ScreenBuff = try .init(allocator, constants.GAME_ROWS, constants.GAME_COLS, writer, offset_r, offset_c);
     defer prev_buff.deinit(allocator);
-    var curr_buff: render.ScreenBuff = try .init(allocator, constants.ROWS, constants.COLS, writer, offset_r, offset_c);
+    var curr_buff: render.ScreenBuff = try .init(allocator, constants.GAME_ROWS, constants.GAME_COLS, writer, offset_r, offset_c);
     defer curr_buff.deinit(allocator);
 
     try resetToStartScreen(&prev_buff, &curr_buff);
     try writer.flush();
+
     var game_state = game.GameState.init(&io);
+
+    var stats_buff = try createStatsBuffer(allocator, writer, frame_offset);
+    defer stats_buff.deinit(allocator);
+
+    var stats_str_buf: [constants.STATS.len * 2]u8 = undefined;
+    _ = try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+    try stats_buff.render();
+    try writer.flush();
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
@@ -52,10 +61,20 @@ pub fn main(init: std.process.Init) !void {
             game_state = game.GameState.init(&io);
         }
 
-        try curr_buff.renderDiff(&prev_buff);
-        try writer.flush();
+        if (game_state.mode == .playing) {
+            try curr_buff.renderDiff(&prev_buff);
+            try writer.flush();
+
+            _ = try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+            try stats_buff.render();
+            try writer.flush();
+        }
 
         std.mem.swap(render.ScreenBuff, &prev_buff, &curr_buff);
+
+        if (game_state.mode == .playing) {
+            curr_buff.clear();
+        }
 
         frameCap(io, frame_start);
     }
@@ -86,4 +105,20 @@ fn printGameFrame(allocator: std.mem.Allocator, writer: *Io.Writer, winsize: ter
     try writer.flush();
 
     return game_offset;
+}
+
+fn createStatsBuffer(allocator: std.mem.Allocator, writer: *Io.Writer, game_offset: game.Point) !render.ScreenBuff {
+    var stats_buff: render.ScreenBuff = try .init(
+        allocator,
+        constants.STATS_FRAME_ROWS,
+        constants.STATS_FRAME_COLS,
+        writer,
+        game_offset.row,
+        game_offset.col + constants.GAME_COLS + 2,
+    );
+    _ = try stats_buff.loadString(constants.STATS_FRAME);
+    try stats_buff.render();
+    try writer.flush();
+
+    return stats_buff;
 }

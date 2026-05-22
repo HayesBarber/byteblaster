@@ -3,17 +3,19 @@ pub const FPS = 60;
 pub const ALIEN_SPEED = (FPS / 3);
 pub const RELOAD_SPEED = (FPS / 1);
 
-pub const ROWS = 24;
-pub const COLS = 48;
-pub const MIN_ROWS = ROWS + 8;
-pub const MIN_COLS = COLS + 8;
+pub const GAME_ROWS = 24;
+pub const GAME_COLS = 48;
+pub const STATS_ROWS = 3;
+pub const STATS_COLS = 12;
+pub const MIN_ROWS = GAME_ROWS + 8;
+pub const MIN_COLS = GAME_COLS + STATS_COLS + 8;
 
 pub const MAX_LAZERS = 64;
 pub const MAX_ALIENS = 512;
 pub const MAX_AMMO = 5;
 
 // ~14 B per cell (ANSI escape + content) for a full playfield render
-pub const STDOUT_BUFFER_SIZE = ROWS * COLS * 16;
+pub const STDOUT_BUFFER_SIZE = GAME_ROWS * GAME_COLS * 16;
 
 pub const START_SCREEN =
     \\█▄▄ █▄█ ▀█▀ █▀▀ █▄▄ █   ▄▀█ █▀▀ ▀█▀ █▀▀ █▀█
@@ -25,13 +27,29 @@ pub const START_SCREEN =
     \\<esc> to exit
 ;
 
-pub const GAME_FRAME = blk: {
-    const top = "╭" ++ ("─" ** COLS) ++ "╮\n";
-    const mid = "│" ++ (" " ** COLS) ++ "│\n";
-    const bot = "╰" ++ ("─" ** COLS) ++ "╯";
+pub const STATS =
+    \\Ammo: {d}
+    \\Score: {d}
+    \\Level: {d}
+;
 
-    break :blk top ++ (mid ** ROWS) ++ bot;
+pub const GAME_FRAME = blk: {
+    const top = "╭" ++ ("─" ** GAME_COLS) ++ "╮\n";
+    const mid = "│" ++ (" " ** GAME_COLS) ++ "│\n";
+    const bot = "╰" ++ ("─" ** GAME_COLS) ++ "╯";
+
+    break :blk top ++ (mid ** GAME_ROWS) ++ bot;
 };
 
-pub const FRAME_ROWS = ROWS + 2;
-pub const FRAME_COLS = COLS + 2;
+pub const STATS_FRAME = blk: {
+    const top = "╭" ++ ("─" ** STATS_COLS) ++ "╮\n";
+    const mid = "│" ++ (" " ** STATS_COLS) ++ "│\n";
+    const bot = "╰" ++ ("─" ** STATS_COLS) ++ "╯";
+
+    break :blk top ++ (mid ** STATS_ROWS) ++ bot;
+};
+
+pub const FRAME_ROWS = GAME_ROWS + 2;
+pub const FRAME_COLS = GAME_COLS + 2;
+pub const STATS_FRAME_ROWS = STATS_ROWS + 2;
+pub const STATS_FRAME_COLS = STATS_COLS + 2;

@@ -22,7 +22,7 @@ pub const Point = struct {
     }
 
     fn moveRight(self: *Point) void {
-        if (self.col + 1 < constants.COLS) {
+        if (self.col + 1 < constants.GAME_COLS) {
             self.col += 1;
         }
     }
@@ -43,7 +43,7 @@ pub const EntityPool = struct {
     count: usize,
     direction: Direction,
     occupancy_grid_status: OccupancyGridStatus,
-    occupancy_grid: [constants.ROWS]u64,
+    occupancy_grid: [constants.GAME_ROWS]u64,
     entity: Entity,
 
     pub fn init(entity: Entity, storage: []Point, direction: Direction, status: OccupancyGridStatus) EntityPool {
@@ -53,7 +53,7 @@ pub const EntityPool = struct {
             .count = 0,
             .direction = direction,
             .occupancy_grid_status = status,
-            .occupancy_grid = if (status == OccupancyGridStatus.enabled) [_]u64{0} ** constants.ROWS else undefined,
+            .occupancy_grid = if (status == OccupancyGridStatus.enabled) [_]u64{0} ** constants.GAME_ROWS else undefined,
         };
     }
 
@@ -66,14 +66,14 @@ pub const EntityPool = struct {
     pub fn update(self: *EntityPool) void {
         const grid_enabled = self.occupancy_grid_status == OccupancyGridStatus.enabled;
         if (grid_enabled) {
-            self.occupancy_grid = [_]u64{0} ** constants.ROWS;
+            self.occupancy_grid = [_]u64{0} ** constants.GAME_ROWS;
         }
 
         var i: usize = 0;
         while (i < self.count) : (i += 1) {
             const at_despawn = switch (self.direction) {
                 .up => self.points[i].row == 0,
-                .down => self.points[i].row == constants.ROWS - 1,
+                .down => self.points[i].row == constants.GAME_ROWS - 1,
             };
             if (at_despawn) {
                 self.remove(i);
@@ -161,6 +161,8 @@ pub const GameState = struct {
     tick_counter: u64,
     rng: std.Random.DefaultPrng,
     ammo: u8,
+    score: usize,
+    level: usize,
 
     pub fn init(io: *const std.Io) GameState {
         var seed_buffer: [8]u8 = undefined;
@@ -168,7 +170,7 @@ pub const GameState = struct {
         const seed = std.mem.readInt(u64, &seed_buffer, .little);
 
         var state = GameState{
-            .player_pos = Point.init(constants.ROWS - 1, constants.COLS / 2),
+            .player_pos = Point.init(constants.GAME_ROWS - 1, constants.GAME_COLS / 2),
             .mode = .start_screen,
             .lazer_storage = undefined,
             .alien_storage = undefined,
@@ -177,6 +179,8 @@ pub const GameState = struct {
             .tick_counter = 0,
             .rng = .init(seed),
             .ammo = constants.MAX_AMMO,
+            .score = 0,
+            .level = 0,
         };
         state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
         state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
@@ -194,14 +198,12 @@ pub const GameState = struct {
             return true;
         }
 
-        buff.clear();
-
         switch (input) {
             .j => self.player_pos.moveLeft(),
             .k => self.player_pos.moveRight(),
             .f => {
                 if (self.ammo > 0) {
-                    _ = self.lazers.spawn(constants.ROWS - 1, self.player_pos.col);
+                    _ = self.lazers.spawn(constants.GAME_ROWS - 1, self.player_pos.col);
                     self.ammo -= 1;
                 }
             },
@@ -218,7 +220,8 @@ pub const GameState = struct {
         // don't update in the same tick so that they don't swap places and appear to phase through
         if (self.tick_counter % constants.ALIEN_SPEED == 0) {
             self.aliens.update();
-            self.aliens.spawnRandom(0, constants.COLS, 5, &self.rng);
+            self.aliens.spawnRandom(0, constants.GAME_COLS, 5, &self.rng);
+            self.score += 1;
         } else {
             self.lazers.update();
         }
@@ -226,6 +229,18 @@ pub const GameState = struct {
         self.lazers.draw(buff);
 
         return false;
+    }
+
+    pub fn scoreStr(self: *GameState, buf: []u8) ![]u8 {
+        return std.fmt.bufPrint(
+            buf,
+            constants.STATS,
+            .{
+                self.ammo,
+                self.score,
+                self.level,
+            },
+        );
     }
 };
 
