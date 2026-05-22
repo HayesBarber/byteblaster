@@ -1,5 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
+const terminal = @import("terminal.zig");
+const printANSI = terminal.printANSI;
 
 pub fn dimensions(comptime s: []const u8) struct { rows: usize, cols: usize } {
     comptime {
@@ -29,6 +31,34 @@ pub fn dimensions(comptime s: []const u8) struct { rows: usize, cols: usize } {
             .cols = max_cols,
         };
     }
+}
+
+pub fn printFrame(
+    comptime s: []const u8,
+    writer: *std.Io.Writer,
+    r_offset: usize,
+    c_offset: usize,
+) !void {
+    var view = try std.unicode.Utf8View.init(s);
+    var iter = view.iterator();
+
+    var r = r_offset;
+    var c = c_offset;
+
+    while (iter.nextCodepointSlice()) |cp| {
+        if (std.mem.eql(u8, cp, "\n")) {
+            r += 1;
+            c = c_offset;
+            continue;
+        }
+
+        try printANSI(writer, terminal.ANSICode.move_cursor, .{ r + 1, c + 1 });
+        try writer.writeAll(cp);
+
+        c += 1;
+    }
+
+    try writer.flush();
 }
 
 test "single line" {

@@ -39,19 +39,16 @@ pub const ScreenBuff = struct {
         comptime frame: []const u8,
     ) !ScreenBuff {
         const dim = comptime utils.dimensions(frame);
+        try utils.printFrame(frame, writer, r_offset, c_offset);
+
         const rows = dim.rows - 2;
         const cols = dim.cols - 2;
         const prev = try allocator.alloc(Cell, rows * cols);
         const curr = try allocator.alloc(Cell, rows * cols);
-
         for (0..curr.len) |i| {
             prev[i].set(" ");
             curr[i].set(" ");
         }
-
-        try terminal.printANSI(writer, terminal.ANSICode.move_cursor, .{ r_offset + 1, c_offset + 1 });
-        try writer.writeAll(frame);
-        try writer.flush();
 
         return .{
             .curr = curr,
