@@ -9,21 +9,34 @@ pub fn dimensions(comptime s: []const u8) struct { rows: usize, cols: usize } {
         var cols: usize = 0;
         var max_cols: usize = 0;
 
-        @setEvalBranchQuota(s.len + 1);
-        for (s) |c| {
-            switch (c) {
+        var i: usize = 0;
+
+        @setEvalBranchQuota(s.len * 4);
+        while (i < s.len) {
+            const len = std.unicode.utf8ByteSequenceLength(s[i]) catch unreachable;
+
+            const cp = std.unicode.utf8Decode(
+                s[i .. i + len],
+            ) catch unreachable;
+
+            switch (cp) {
                 '\n' => {
                     rows += 1;
-                    if (cols > max_cols) max_cols = cols;
+                    if (cols > max_cols)
+                        max_cols = cols;
                     cols = 0;
                 },
                 else => cols += 1,
             }
+
+            i += len;
         }
 
         if (cols > 0 or s.len == 0) {
             rows += 1;
-            if (cols > max_cols) max_cols = cols;
+
+            if (cols > max_cols)
+                max_cols = cols;
         }
 
         return .{
