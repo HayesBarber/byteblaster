@@ -1,6 +1,6 @@
 const std = @import("std");
 const Io = std.Io;
-const render = @import("renderv2.zig");
+const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const constants = @import("constants.zig");
 

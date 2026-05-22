@@ -2,7 +2,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const terminal = @import("terminal.zig");
-const render = @import("renderv2.zig");
+const render = @import("render.zig");
 const game = @import("game.zig");
 const constants = @import("constants.zig");
 
