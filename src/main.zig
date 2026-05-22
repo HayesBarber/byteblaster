@@ -23,12 +23,12 @@ pub fn main(init: std.process.Init) !void {
         try writer.writeAll(msg);
         return;
     };
+    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
+    const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
 
     var guard = try terminal.TerminalGuard.init(writer);
     defer guard.deinit();
 
-    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
-    const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
     var game_buff: render.ScreenBuff = try .init(allocator, writer, row_offset, col_offset, constants.GAME_FRAME);
     defer game_buff.deinit(allocator);
     try game_buff.loadString(constants.START_SCREEN);
