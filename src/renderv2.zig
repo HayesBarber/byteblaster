@@ -39,7 +39,7 @@ pub const ScreenBuff = struct {
         comptime frame: []const u8,
     ) !ScreenBuff {
         const dim = comptime utils.dimensions(frame);
-        try utils.printFrame(frame, writer, r_offset, c_offset);
+        try utils.renderComptimeArt(frame, writer, r_offset, c_offset);
 
         const rows = dim.rows - 2;
         const cols = dim.cols - 2;

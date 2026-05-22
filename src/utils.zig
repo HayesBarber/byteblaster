@@ -46,7 +46,7 @@ pub fn dimensions(comptime s: []const u8) struct { rows: usize, cols: usize } {
     }
 }
 
-pub fn printFrame(
+pub fn renderComptimeArt(
     comptime s: []const u8,
     writer: *std.Io.Writer,
     r_offset: usize,
