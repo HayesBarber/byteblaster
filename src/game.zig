@@ -217,6 +217,10 @@ pub const GameState = struct {
             self.ammo = @min(self.ammo + 1, constants.MAX_AMMO);
         }
 
+        if (self.tick_counter % constants.LEVEL_SPEED == 0) {
+            self.level += 1;
+        }
+
         // don't update in the same tick so that they don't swap places and appear to phase through
         if (self.tick_counter % constants.ALIEN_SPEED == 0) {
             self.aliens.update();
