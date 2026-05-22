@@ -7,6 +7,7 @@ pub fn dimensions(comptime s: []const u8) struct { rows: usize, cols: usize } {
         var cols: usize = 0;
         var max_cols: usize = 0;
 
+        @setEvalBranchQuota(s.len + 1);
         for (s) |c| {
             switch (c) {
                 '\n' => {
