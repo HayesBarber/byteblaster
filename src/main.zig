@@ -29,12 +29,30 @@ pub fn main(init: std.process.Init) !void {
     var guard = try terminal.TerminalGuard.init(writer);
     defer guard.deinit();
 
-    var game_buff: render.ScreenBuff = try .init(allocator, writer, row_offset, col_offset, constants.GAME_FRAME);
+    var game_buff: render.ScreenBuff = try .init(
+        allocator,
+        writer,
+        row_offset,
+        col_offset,
+        constants.GAME_FRAME,
+    );
     defer game_buff.deinit(allocator);
     try game_buff.loadString(constants.START_SCREEN);
     try game_buff.renderDiff();
 
     var game_state = game.GameState.init(&io);
+
+    var stats_buff: render.ScreenBuff = try .init(
+        allocator,
+        writer,
+        row_offset,
+        col_offset + constants.FRAME_COLS,
+        constants.STATS_FRAME,
+    );
+    defer stats_buff.deinit(allocator);
+    var stats_str_buf: [constants.STATS.len * 2]u8 = undefined;
+    try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+    try stats_buff.renderDiff();
 
     while (true) {
         const frame_start = std.Io.Timestamp.now(io, .real).toNanoseconds();
@@ -50,6 +68,8 @@ pub fn main(init: std.process.Init) !void {
 
         if (game_state.mode == .playing) {
             try game_buff.renderDiff();
+            try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+            try stats_buff.renderDiff();
         }
 
         frameCap(io, frame_start);
