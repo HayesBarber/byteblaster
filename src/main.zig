@@ -24,7 +24,7 @@ pub fn main(init: std.process.Init) !void {
         try writer.flush();
         return;
     };
-    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
+    const row_offset = (winsize.rows - constants.FRAME_ROWS - constants.STATS_ROWS) / 2;
     const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
 
     var guard = try terminal.TerminalGuard.init(writer);
