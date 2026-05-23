@@ -21,6 +21,7 @@ pub fn main(init: std.process.Init) !void {
             error.TooFewRows => "Too few terminal rows\n",
         };
         try writer.writeAll(msg);
+        try writer.flush();
         return;
     };
     const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
@@ -45,8 +46,8 @@ pub fn main(init: std.process.Init) !void {
     var stats_buff: render.ScreenBuff = try .init(
         allocator,
         writer,
-        row_offset,
-        col_offset + constants.FRAME_COLS,
+        row_offset + constants.FRAME_ROWS,
+        col_offset,
         constants.STATS_FRAME,
     );
     defer stats_buff.deinit(allocator);
