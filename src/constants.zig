@@ -1,8 +1,9 @@
+// 60 FPS
 pub const DT_NS = 16_666_667;
-pub const FPS = 60;
-pub const ALIEN_SPEED = (FPS / 3);
-pub const RELOAD_SPEED = (FPS / 1);
-pub const LEVEL_SPEED = (FPS * 10);
+pub const ALIEN_SPEED_START = 20;
+pub const ALIEN_SPEED_END = 5;
+pub const RELOAD_SPEED = 60;
+pub const LEVEL_SPEED = 500;
 
 pub const GAME_ROWS = 24;
 pub const GAME_COLS = 48;
