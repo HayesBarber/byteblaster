@@ -80,7 +80,7 @@ pub fn progressBarStr(
 ) []const u8 {
     var pos: usize = 0;
 
-    // unicode chars we are using for progress bar are 3 bytes each
+    // unicode chars we are using for progress bar are 3 bytes
     const width = buf.len / 3;
 
     for (0..width) |i| {
