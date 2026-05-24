@@ -218,7 +218,7 @@ pub const GameState = struct {
             self.ammo = @min(self.ammo + 1, constants.MAX_AMMO);
         }
 
-        if (self.tick_counter % constants.LEVEL_SPEED == 0) {
+        if (self.tick_counter % constants.LEVEL_SPEED == 0 and self.level < 10) {
             self.level += 1;
         }
 
