@@ -14,6 +14,7 @@ pub const MIN_COLS = GAME_COLS + 8;
 pub const MAX_LAZERS = 64;
 pub const MAX_ALIENS = 512;
 pub const MAX_AMMO = 5;
+pub const MAX_LEVEL = 10;
 
 // ~14 B per cell (ANSI escape + content) for a full playfield render
 pub const STDOUT_BUFFER_SIZE = GAME_ROWS * GAME_COLS * 16;

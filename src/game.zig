@@ -218,7 +218,7 @@ pub const GameState = struct {
             self.ammo = @min(self.ammo + 1, constants.MAX_AMMO);
         }
 
-        if (self.tick_counter % constants.LEVEL_SPEED == 0 and self.level < 10) {
+        if (self.tick_counter % constants.LEVEL_SPEED == 0 and self.level < constants.MAX_LEVEL) {
             self.level += 1;
         }
 
@@ -237,14 +237,31 @@ pub const GameState = struct {
     }
 
     pub fn scoreStr(self: *GameState, buf: []u8) []u8 {
-        const prefix = "Ammo: ";
-        @memcpy(buf[0..prefix.len], prefix);
-        const progress = utils.progressBarStr(
-            buf[prefix.len..],
+        var off: usize = 0;
+
+        const ammo_prefix = "Ammo: ";
+        @memcpy(buf[off .. off + ammo_prefix.len], ammo_prefix);
+        off += ammo_prefix.len;
+
+        const ammo_bar = utils.progressBarStr(
+            buf[off..],
             self.ammo,
             constants.MAX_AMMO,
         );
-        return buf[0 .. prefix.len + progress.len];
+        off += ammo_bar.len;
+
+        const level_prefix = " Level: ";
+        @memcpy(buf[off .. off + level_prefix.len], level_prefix);
+        off += level_prefix.len;
+
+        const level_bar = utils.progressBarStr(
+            buf[off..],
+            self.level,
+            constants.MAX_LEVEL,
+        );
+        off += level_bar.len;
+
+        return buf[0..off];
     }
 };
 
