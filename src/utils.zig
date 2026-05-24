@@ -82,7 +82,7 @@ pub fn progressBarStr(
     var pos: usize = 0;
 
     for (0..max) |i| {
-        const ch = if (i < curr) "█" else "░";
+        const ch = if (i < curr) "▰" else "▱";
         // unicode chars we are using for progress bar are 3 bytes
         @memcpy(buf[pos .. pos + 3], ch);
         pos += 3;
@@ -95,18 +95,18 @@ test "progressBarStr" {
     var buf: [15]u8 = undefined; // 5 visible chars
 
     try std.testing.expectEqualStrings(
-        "██░░░",
-        progressBarStr(&buf, 2),
+        "▰▰▱▱▱",
+        progressBarStr(&buf, 2, 5),
     );
 
     try std.testing.expectEqualStrings(
-        "█████",
-        progressBarStr(&buf, 5),
+        "▰▰▰▰▰",
+        progressBarStr(&buf, 5, 5),
     );
 
     try std.testing.expectEqualStrings(
-        "░░░░░",
-        progressBarStr(&buf, 0),
+        "▱▱▱▱▱",
+        progressBarStr(&buf, 0, 5),
     );
 }
 
