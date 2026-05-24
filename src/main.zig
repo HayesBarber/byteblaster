@@ -21,9 +21,10 @@ pub fn main(init: std.process.Init) !void {
             error.TooFewRows => "Too few terminal rows\n",
         };
         try writer.writeAll(msg);
+        try writer.flush();
         return;
     };
-    const row_offset = (winsize.rows - constants.FRAME_ROWS) / 2;
+    const row_offset = (winsize.rows - constants.FRAME_ROWS - constants.STATS_ROWS) / 2;
     const col_offset = (winsize.cols - constants.FRAME_COLS) / 2;
 
     var guard = try terminal.TerminalGuard.init(writer);
@@ -45,13 +46,13 @@ pub fn main(init: std.process.Init) !void {
     var stats_buff: render.ScreenBuff = try .init(
         allocator,
         writer,
-        row_offset,
-        col_offset + constants.FRAME_COLS,
+        row_offset + constants.FRAME_ROWS,
+        col_offset,
         constants.STATS_FRAME,
     );
     defer stats_buff.deinit(allocator);
-    var stats_str_buf: [constants.STATS.len * 2]u8 = undefined;
-    try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+    var stats_str_buf: [constants.STATS.len * 3]u8 = undefined;
+    try stats_buff.loadString(game_state.scoreStr(&stats_str_buf));
     try stats_buff.renderDiff();
 
     while (true) {
@@ -68,7 +69,7 @@ pub fn main(init: std.process.Init) !void {
 
         if (game_state.mode == .playing) {
             try game_buff.renderDiff();
-            try stats_buff.loadString(try game_state.scoreStr(&stats_str_buf));
+            try stats_buff.loadString(game_state.scoreStr(&stats_str_buf));
             try stats_buff.renderDiff();
         }
 

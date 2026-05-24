@@ -3,6 +3,7 @@ const Io = std.Io;
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const constants = @import("constants.zig");
+const utils = @import("utils.zig");
 
 pub const Point = struct {
     row: usize,
@@ -217,7 +218,7 @@ pub const GameState = struct {
             self.ammo = @min(self.ammo + 1, constants.MAX_AMMO);
         }
 
-        if (self.tick_counter % constants.LEVEL_SPEED == 0) {
+        if (self.tick_counter % constants.LEVEL_SPEED == 0 and self.level < constants.MAX_LEVEL) {
             self.level += 1;
         }
 
@@ -235,16 +236,40 @@ pub const GameState = struct {
         return false;
     }
 
-    pub fn scoreStr(self: *GameState, buf: []u8) ![]u8 {
-        return std.fmt.bufPrint(
-            buf,
-            constants.STATS,
-            .{
-                self.ammo,
-                self.score,
-                self.level,
-            },
+    pub fn scoreStr(self: *GameState, buf: []u8) []u8 {
+        var off: usize = 0;
+
+        const ammo_prefix = "Ammo: ";
+        @memcpy(buf[off .. off + ammo_prefix.len], ammo_prefix);
+        off += ammo_prefix.len;
+
+        const ammo_bar = utils.progressBarStr(
+            buf[off..],
+            self.ammo,
+            constants.MAX_AMMO,
         );
+        off += ammo_bar.len;
+
+        const level_prefix = " Level: ";
+        @memcpy(buf[off .. off + level_prefix.len], level_prefix);
+        off += level_prefix.len;
+
+        const level_bar = utils.progressBarStr(
+            buf[off..],
+            self.level,
+            constants.MAX_LEVEL,
+        );
+        off += level_bar.len;
+
+        const score_prefix = " Score: ";
+        @memcpy(buf[off .. off + score_prefix.len], score_prefix);
+        off += score_prefix.len;
+
+        if (std.fmt.bufPrint(buf[off..], "{d}", .{self.score})) |written| {
+            off += written.len;
+        } else |_| {}
+
+        return buf[0..off];
     }
 };
 

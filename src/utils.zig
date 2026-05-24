@@ -74,6 +74,42 @@ pub fn renderComptimeArt(
     try writer.flush();
 }
 
+pub fn progressBarStr(
+    buf: []u8,
+    curr: usize,
+    max: usize,
+) []u8 {
+    var pos: usize = 0;
+
+    for (0..max) |i| {
+        const ch = if (i < curr) "▰" else "▱";
+        // unicode chars we are using for progress bar are 3 bytes
+        @memcpy(buf[pos .. pos + 3], ch);
+        pos += 3;
+    }
+
+    return buf[0..pos];
+}
+
+test "progressBarStr" {
+    var buf: [15]u8 = undefined; // 5 visible chars
+
+    try std.testing.expectEqualStrings(
+        "▰▰▱▱▱",
+        progressBarStr(&buf, 2, 5),
+    );
+
+    try std.testing.expectEqualStrings(
+        "▰▰▰▰▰",
+        progressBarStr(&buf, 5, 5),
+    );
+
+    try std.testing.expectEqualStrings(
+        "▱▱▱▱▱",
+        progressBarStr(&buf, 0, 5),
+    );
+}
+
 test "single line" {
     const dims = comptime dimensions("hello");
 
