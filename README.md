@@ -2,5 +2,5 @@
 
 A terminal based survival game.
 
-![Preview](./preview.png)
+<img src="./preview.png" alt="Preview" width="200"/>
 
