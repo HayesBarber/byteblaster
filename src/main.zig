@@ -51,7 +51,7 @@ pub fn main(init: std.process.Init) !void {
         constants.STATS_FRAME,
     );
     defer stats_buff.deinit(allocator);
-    var stats_str_buf: [constants.STATS.len * 2]u8 = undefined;
+    var stats_str_buf: [constants.STATS.len * 3]u8 = undefined;
     try stats_buff.loadString(game_state.scoreStr(&stats_str_buf));
     try stats_buff.renderDiff();
 

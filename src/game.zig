@@ -261,6 +261,14 @@ pub const GameState = struct {
         );
         off += level_bar.len;
 
+        const score_prefix = " Score: ";
+        @memcpy(buf[off .. off + score_prefix.len], score_prefix);
+        off += score_prefix.len;
+
+        if (std.fmt.bufPrint(buf[off..], "{d}", .{self.score})) |written| {
+            off += written.len;
+        } else |_| {}
+
         return buf[0..off];
     }
 };
