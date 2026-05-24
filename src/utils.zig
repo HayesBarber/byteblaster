@@ -77,14 +77,13 @@ pub fn renderComptimeArt(
 pub fn progressBarStr(
     buf: []u8,
     curr: usize,
-) []const u8 {
+    max: usize,
+) []u8 {
     var pos: usize = 0;
 
-    // unicode chars we are using for progress bar are 3 bytes
-    const width = buf.len / 3;
-
-    for (0..width) |i| {
+    for (0..max) |i| {
         const ch = if (i < curr) "█" else "░";
+        // unicode chars we are using for progress bar are 3 bytes
         @memcpy(buf[pos .. pos + 3], ch);
         pos += 3;
     }

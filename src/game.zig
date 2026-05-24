@@ -3,6 +3,7 @@ const Io = std.Io;
 const render = @import("render.zig");
 const terminal = @import("terminal.zig");
 const constants = @import("constants.zig");
+const utils = @import("utils.zig");
 
 pub const Point = struct {
     row: usize,
@@ -235,16 +236,15 @@ pub const GameState = struct {
         return false;
     }
 
-    pub fn scoreStr(self: *GameState, buf: []u8) ![]u8 {
-        return std.fmt.bufPrint(
-            buf,
-            constants.STATS,
-            .{
-                self.ammo,
-                self.score,
-                self.level,
-            },
+    pub fn scoreStr(self: *GameState, buf: []u8) []u8 {
+        const prefix = "Ammo: ";
+        @memcpy(buf[0..prefix.len], prefix);
+        const progress = utils.progressBarStr(
+            buf[prefix.len..],
+            self.ammo,
+            constants.MAX_AMMO,
         );
+        return buf[0 .. prefix.len + progress.len];
     }
 };
 
