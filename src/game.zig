@@ -164,6 +164,7 @@ pub const GameState = struct {
     ammo: u8,
     score: usize,
     level: usize,
+    game_speed: usize,
 
     pub fn init(io: *const std.Io) GameState {
         var seed_buffer: [8]u8 = undefined;
@@ -182,6 +183,7 @@ pub const GameState = struct {
             .ammo = constants.MAX_AMMO,
             .score = 0,
             .level = 0,
+            .game_speed = constants.ALIEN_SPEED_START,
         };
         state.lazers = EntityPool.init(.lazer, &state.lazer_storage, .up, .disabled);
         state.aliens = EntityPool.init(.alien, &state.alien_storage, .down, .enabled);
@@ -220,10 +222,17 @@ pub const GameState = struct {
 
         if (self.tick_counter % constants.LEVEL_SPEED == 0 and self.level < constants.MAX_LEVEL) {
             self.level += 1;
+
+            const start_speed = constants.ALIEN_SPEED_START;
+            const end_speed = constants.ALIEN_SPEED_END;
+            const max_level = constants.MAX_LEVEL;
+            self.game_speed =
+                start_speed -
+                ((start_speed - end_speed) * self.level) / max_level;
         }
 
         // don't update in the same tick so that they don't swap places and appear to phase through
-        if (self.tick_counter % constants.ALIEN_SPEED == 0) {
+        if (self.tick_counter % self.game_speed == 0) {
             self.aliens.update();
             self.aliens.spawnRandom(0, constants.GAME_COLS, 5, &self.rng);
             self.score += 1;
