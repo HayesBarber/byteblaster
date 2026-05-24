@@ -2,5 +2,7 @@
 
 A terminal based survival game.
 
-<img src="./preview.png" alt="Preview" width="200"/>
+<div style="text-align: center;">
+  <img src="./preview.png" alt="Preview" width="400"/>
+</div>
 
